@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v0.3
-// 학사일정 API 연결 및 달력 배지 표시
+// 우리학교 생활 달력 v0.4
+// 학사일정 + 급식 API 연결 및 달력 배지 표시
 // ============================================================
 
 const API_CONFIG = {
@@ -66,8 +66,12 @@ const state = {
   selectedDate: formatDateKey(new Date()),
   activeTab: "all",
   schedules: [],
+  meals: [],
+  mealsByDate: {},
   scheduleStatus: "idle",
   scheduleMessage: "",
+  mealStatus: "idle",
+  mealMessage: "",
   meal: null,
   timetable: [],
   schools: []
@@ -134,8 +138,12 @@ function bindEvents() {
     localStorage.removeItem(STORAGE_KEY);
     state.selectedSchool = null;
     state.schedules = [];
+    state.meals = [];
+    state.mealsByDate = {};
     state.scheduleStatus = "idle";
     state.scheduleMessage = "";
+    state.mealStatus = "idle";
+    state.mealMessage = "";
     state.meal = null;
     state.timetable = [];
     state.schools = [];
@@ -227,6 +235,21 @@ async function fetchSchedules() {
   return (data.schedules || []).map(normalizeSchedule);
 }
 
+async function fetchMeals() {
+  if (!state.selectedSchool) return [];
+  const params = new URLSearchParams({
+    officeCode: state.selectedSchool.officeCode,
+    schoolCode: state.selectedSchool.schoolCode,
+    year: String(state.currentDate.getFullYear()),
+    month: String(state.currentDate.getMonth() + 1)
+  });
+  const response = await fetch(`${API_CONFIG.baseUrl}/api/meals?${params.toString()}`);
+  if (!response.ok) throw new Error("급식 조회 실패");
+  const data = await response.json();
+  if (Array.isArray(data.meals)) return data.meals.map(normalizeMeal);
+  return data.meal ? [normalizeMeal(data.meal)] : [];
+}
+
 async function fetchMeal() {
   if (!state.selectedSchool || !state.selectedDate) return null;
   const params = new URLSearchParams({
@@ -237,7 +260,7 @@ async function fetchMeal() {
   const response = await fetch(`${API_CONFIG.baseUrl}/api/meals?${params.toString()}`);
   if (!response.ok) throw new Error("급식 조회 실패");
   const data = await response.json();
-  return data.meal || null;
+  return data.meal ? normalizeMeal(data.meal) : null;
 }
 
 async function fetchTimetable() {
@@ -262,8 +285,13 @@ async function loadMonthData() {
   if (!state.selectedSchool) return;
   state.scheduleStatus = "loading";
   state.scheduleMessage = "학사일정을 불러오는 중입니다.";
+  state.mealStatus = "loading";
+  state.mealMessage = "급식정보를 불러오는 중입니다.";
   renderCalendar();
   renderScheduleDetail();
+  renderMealDetail();
+
+  const monthPrefix = `${state.currentDate.getFullYear()}-${pad(state.currentDate.getMonth() + 1)}`;
 
   try {
     state.schedules = await fetchSchedules();
@@ -272,7 +300,7 @@ async function loadMonthData() {
   } catch (error) {
     const fallback = mockSchedules
       .filter((item) => item.schoolCode === state.selectedSchool.schoolCode)
-      .filter((item) => item.date.startsWith(`${state.currentDate.getFullYear()}-${pad(state.currentDate.getMonth() + 1)}`));
+      .filter((item) => item.date.startsWith(monthPrefix));
 
     state.schedules = fallback;
     state.scheduleStatus = fallback.length ? "mock" : "error";
@@ -280,13 +308,30 @@ async function loadMonthData() {
       ? "프록시 서버 연결이 안 되어 예시 학사일정으로 보여드려요."
       : "학사일정을 불러오지 못했어요. 프록시 서버 주소와 NEIS API 키를 확인해 주세요.";
   }
+
+  try {
+    state.meals = await fetchMeals();
+    state.mealsByDate = Object.fromEntries(state.meals.map((meal) => [meal.date, meal]));
+    state.mealStatus = "success";
+    state.mealMessage = state.meals.length ? "" : "이 달에 등록된 급식정보가 없습니다.";
+  } catch (error) {
+    const fallbackMeals = Object.entries(mockMeals)
+      .filter(([date]) => date.startsWith(monthPrefix))
+      .map(([date, meal]) => normalizeMeal({ date, ...meal, mealName: "중식" }));
+
+    state.meals = fallbackMeals;
+    state.mealsByDate = Object.fromEntries(fallbackMeals.map((meal) => [meal.date, meal]));
+    state.mealStatus = fallbackMeals.length ? "mock" : "error";
+    state.mealMessage = fallbackMeals.length
+      ? "프록시 서버 연결이 안 되어 예시 급식정보로 보여드려요."
+      : "급식정보를 불러오지 못했어요. 프록시 서버 주소와 NEIS API 키를 확인해 주세요.";
+  }
+
   await loadDayData();
 }
 
 async function loadDayData() {
-  // v0.3에서는 학사일정만 실제 연결합니다.
-  // 급식과 시간표는 다음 단계에서 날짜별로 연결할 예정입니다.
-  state.meal = null;
+  state.meal = state.mealsByDate[state.selectedDate] || null;
   state.timetable = [];
 }
 
@@ -353,16 +398,23 @@ function renderCalendar() {
     const key = formatDateKey(date);
     const isCurrentMonth = date.getMonth() === month;
     const daySchedules = state.schedules.filter((item) => item.date === key);
+    const dayMeal = state.mealsByDate[key];
     const classes = ["day-cell", !isCurrentMonth ? "muted" : "", key === todayKey ? "today" : "", key === selectedKey ? "selected" : ""].filter(Boolean).join(" ");
 
     html += `<button type="button" class="${classes}" data-date="${key}" aria-label="${key}">
       <span class="day-number">${date.getDate()}</span>
-      <span class="day-markers">${isCurrentMonth ? renderScheduleMarkers(daySchedules) : ""}</span>
+      <span class="day-markers">${isCurrentMonth ? renderDayMarkers(daySchedules, dayMeal) : ""}</span>
     </button>`;
   }
   html += `</div>`;
-  if (state.selectedSchool && state.scheduleMessage) {
-    html += `<div class="calendar-status ${state.scheduleStatus}">${escapeHtml(state.scheduleMessage)}</div>`;
+  if (state.selectedSchool) {
+    const messages = [
+      state.scheduleMessage ? { text: state.scheduleMessage, status: state.scheduleStatus } : null,
+      state.mealMessage ? { text: state.mealMessage, status: state.mealStatus } : null
+    ].filter(Boolean);
+    messages.forEach((message) => {
+      html += `<div class="calendar-status ${message.status}">${escapeHtml(message.text)}</div>`;
+    });
   }
   els.calendar.innerHTML = html;
 }
@@ -397,7 +449,28 @@ function renderMealDetail() {
     els.mealDetail.innerHTML = `<p class="empty">학교를 먼저 선택해 주세요.</p>`;
     return;
   }
-  els.mealDetail.innerHTML = `<strong>${formatKoreanDate(state.selectedDate)}</strong><p class="empty">급식 정보는 v0.4에서 연결할 예정입니다.</p>`;
+  if (state.mealStatus === "loading") {
+    els.mealDetail.innerHTML = `<strong>${formatKoreanDate(state.selectedDate)}</strong><p class="empty">급식정보를 불러오는 중입니다.</p>`;
+    return;
+  }
+
+  const notice = state.mealMessage && state.mealStatus !== "success" ? `<p class="detail-notice">${escapeHtml(state.mealMessage)}</p>` : "";
+  if (!state.meal) {
+    els.mealDetail.innerHTML = `<strong>${formatKoreanDate(state.selectedDate)}</strong>${notice}<p class="empty">이 날짜의 급식정보가 없습니다.</p>`;
+    return;
+  }
+
+  const dishes = state.meal.dishes || [];
+  els.mealDetail.innerHTML = `
+    <strong>${formatKoreanDate(state.selectedDate)}</strong>
+    ${notice}
+    <div class="meal-summary">
+      <span class="meal-name">${escapeHtml(state.meal.mealName || "급식")}</span>
+      ${state.meal.calorie ? `<span class="meal-calorie">${escapeHtml(state.meal.calorie)}</span>` : ""}
+    </div>
+    ${dishes.length ? `<ul>${dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>` : `<p class="empty">표시할 메뉴가 없습니다.</p>`}
+    ${state.meal.allergy ? `<p class="meal-note">${escapeHtml(state.meal.allergy)}</p>` : ""}
+  `;
 }
 
 function renderTimetableDetail() {
@@ -460,6 +533,14 @@ function renderSchoolResults(schools, notice = "") {
   });
 }
 
+function renderDayMarkers(scheduleItems, meal) {
+  const markers = [];
+  const scheduleMarker = renderScheduleMarkers(scheduleItems);
+  if (scheduleMarker) markers.push(scheduleMarker);
+  if (meal) markers.push(`<span class="marker meal">🍱 급식</span>`);
+  return markers.join("");
+}
+
 function renderScheduleMarkers(items) {
   if (!state.selectedSchool || !items.length) return "";
 
@@ -496,6 +577,24 @@ function searchMockSchools(keyword, officeCode) {
   });
 }
 
+function normalizeMeal(meal = {}) {
+  const rawDate = meal.date || meal.MLSV_YMD || "";
+  const date = rawDate.includes("-") ? rawDate : `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`;
+  const dishes = Array.isArray(meal.dishes)
+    ? meal.dishes
+    : cleanTextLines(meal.DDISH_NM || meal.menu || "");
+
+  return {
+    date,
+    mealName: meal.mealName || meal.MMEAL_SC_NM || "급식",
+    dishes,
+    calorie: meal.calorie || meal.CAL_INFO || "",
+    nutrition: meal.nutrition || meal.NTR_INFO || "",
+    origin: meal.origin || meal.ORPLC_INFO || "",
+    allergy: meal.allergy || "식단명 숫자는 알레르기 유발 식재료 번호입니다."
+  };
+}
+
 function normalizeSchedule(item) {
   const date = item.date || item.AA_YMD || item.aaYmd || "";
   return {
@@ -516,6 +615,15 @@ function loadSelectedSchool() {
   } catch (error) {
     return null;
   }
+}
+
+function cleanTextLines(value = "") {
+  return String(value)
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .split(/\n|,/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function formatDateKey(date) {

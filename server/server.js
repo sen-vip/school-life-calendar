@@ -76,29 +76,33 @@ app.get("/api/schedules", async (req, res) => {
 
 app.get("/api/meals", async (req, res) => {
   try {
-    const { officeCode, schoolCode, date } = req.query;
-    const data = await neisFetch("mealServiceDietInfo", {
+    const { officeCode, schoolCode, date, year, month } = req.query;
+    const params = {
       ATPT_OFCDC_SC_CODE: officeCode,
-      SD_SCHUL_CODE: schoolCode,
-      MLSV_YMD: date
-    });
+      SD_SCHUL_CODE: schoolCode
+    };
 
-    const rows = getRows(data, "mealServiceDietInfo");
-    const row = rows[0];
-    if (!row) return res.json({ meal: null });
+    if (date) {
+      params.MLSV_YMD = date;
+    } else if (year && month) {
+      const monthNumber = String(month).padStart(2, "0");
+      params.MLSV_FROM_YMD = `${year}${monthNumber}01`;
+      params.MLSV_TO_YMD = `${year}${monthNumber}${lastDayOfMonth(Number(year), Number(month))}`;
+    }
 
-    const dishes = cleanHtmlLine(row.DDISH_NM).split("\n").filter(Boolean);
-    res.json({
-      meal: {
-        date: toDateKey(row.MLSV_YMD),
-        mealName: row.MMEAL_SC_NM || "급식",
-        dishes,
-        calorie: row.CAL_INFO || "",
-        nutrition: cleanHtmlLine(row.NTR_INFO),
-        origin: cleanHtmlLine(row.ORPLC_INFO),
-        allergy: "식단명 숫자는 알레르기 유발 식재료 번호입니다."
-      }
-    });
+    const data = await neisFetch("mealServiceDietInfo", params);
+    const meals = getRows(data, "mealServiceDietInfo").map((row) => ({
+      date: toDateKey(row.MLSV_YMD),
+      mealName: row.MMEAL_SC_NM || "급식",
+      dishes: cleanHtmlLine(row.DDISH_NM).split("\n").filter(Boolean),
+      calorie: row.CAL_INFO || "",
+      nutrition: cleanHtmlLine(row.NTR_INFO),
+      origin: cleanHtmlLine(row.ORPLC_INFO),
+      allergy: "식단명 숫자는 알레르기 유발 식재료 번호입니다."
+    }));
+
+    if (date) return res.json({ meal: meals[0] || null });
+    res.json({ meals });
   } catch (error) {
     sendError(res, error);
   }

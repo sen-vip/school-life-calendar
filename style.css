@@ -251,3 +251,36 @@ button { cursor: pointer; }
   max-width: 100%;
   font-weight: 800;
 }
+
+
+/* v0.4 meal calendar display */
+.meal-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+.meal-name, .meal-calorie {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.meal-name {
+  background: #fff5e7;
+  color: #9a5700;
+}
+.meal-calorie {
+  background: #f3f6fb;
+  color: var(--muted);
+}
+.meal-note, .detail-notice {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
