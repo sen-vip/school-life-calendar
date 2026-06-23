@@ -284,3 +284,28 @@ button { cursor: pointer; }
   font-size: 13px;
   line-height: 1.5;
 }
+
+.timetable-ready {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f6f9fe;
+  border: 1px solid #e4ebf7;
+}
+.timetable-ready span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 3px;
+}
+.timetable-ready b {
+  display: block;
+  color: var(--navy);
+  font-size: 15px;
+}
+.timetable-ready p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}

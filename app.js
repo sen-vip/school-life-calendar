@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v0.4
-// 학사일정 + 급식 API 연결 및 달력 배지 표시
+// 우리학교 생활 달력 v0.5
+// 시간표 입력 UI 및 입력값 저장 준비
 // ============================================================
 
 const API_CONFIG = {
@@ -9,6 +9,11 @@ const API_CONFIG = {
 };
 
 const STORAGE_KEY = "schoolLifeCalendar.selectedSchool";
+const TIMETABLE_STORAGE_KEYS = {
+  grade: "schoolLifeTimetableGrade",
+  className: "schoolLifeTimetableClass",
+  semester: "schoolLifeTimetableSemester"
+};
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 const OFFICE_OPTIONS = [
@@ -74,6 +79,7 @@ const state = {
   mealMessage: "",
   meal: null,
   timetable: [],
+  timetableNotice: "",
   schools: []
 };
 
@@ -106,6 +112,7 @@ const els = {
 
 function init() {
   renderOfficeOptions();
+  loadTimetablePreferences();
   bindEvents();
   const saved = loadSelectedSchool();
   if (saved) {
@@ -191,7 +198,25 @@ function bindEvents() {
     });
   });
 
+  [els.gradeInput, els.classInput, els.semesterInput].forEach((input) => {
+    input.addEventListener("input", () => {
+      saveTimetablePreferences();
+      state.timetableNotice = "";
+      renderTimetableDetail();
+    });
+    input.addEventListener("change", () => {
+      saveTimetablePreferences();
+      state.timetableNotice = "";
+      renderTimetableDetail();
+    });
+  });
+
   els.loadTimetableBtn.addEventListener("click", () => {
+    saveTimetablePreferences();
+    const apiName = getTimetableApiName(state.selectedSchool);
+    state.timetableNotice = apiName
+      ? `시간표 API 연결은 v0.6에서 진행할 예정입니다. 현재는 학년·반·학기 입력값 저장까지만 지원합니다. 준비된 API: ${apiName}`
+      : "시간표 API 연결은 v0.6에서 진행할 예정입니다. 현재는 학년·반·학기 입력값 저장까지만 지원합니다.";
     renderTimetableDetail();
   });
 }
@@ -263,22 +288,12 @@ async function fetchMeal() {
   return data.meal ? normalizeMeal(data.meal) : null;
 }
 
-async function fetchTimetable() {
-  if (!state.selectedSchool || !state.selectedDate) return [];
-  const params = new URLSearchParams({
-    officeCode: state.selectedSchool.officeCode,
-    schoolCode: state.selectedSchool.schoolCode,
-    schoolType: state.selectedSchool.schoolType || "",
-    year: String(state.currentDate.getFullYear()),
-    semester: els.semesterInput.value,
-    grade: els.gradeInput.value,
-    className: els.classInput.value,
-    date: compactDate(state.selectedDate)
-  });
-  const response = await fetch(`${API_CONFIG.baseUrl}/api/timetable?${params.toString()}`);
-  if (!response.ok) throw new Error("시간표 조회 실패");
-  const data = await response.json();
-  return data.timetable || [];
+function getTimetableApiName(school) {
+  const schoolType = `${school?.schoolType || ""} ${school?.schoolName || ""}`;
+  if (/초등/.test(schoolType)) return "elsTimetable";
+  if (/중학|중학교/.test(schoolType)) return "misTimetable";
+  if (/고등|고등학교/.test(schoolType)) return "hisTimetable";
+  return "";
 }
 
 async function loadMonthData() {
@@ -344,13 +359,6 @@ async function loadMeal() {
   }
 }
 
-async function loadTimetable() {
-  try {
-    state.timetable = await fetchTimetable();
-  } catch (error) {
-    state.timetable = mockTimetable;
-  }
-}
 
 function renderAll() {
   renderSelectedSchool();
@@ -478,7 +486,25 @@ function renderTimetableDetail() {
     els.timetableDetail.innerHTML = `<p class="empty">학교를 먼저 선택해 주세요.</p>`;
     return;
   }
-  els.timetableDetail.innerHTML = `<strong>${formatKoreanDate(state.selectedDate)}</strong><p class="empty">시간표 정보는 v0.5 이후 학년·반 입력 UI를 정리한 뒤 연결할 예정입니다.</p>`;
+
+  const grade = els.gradeInput.value || "1";
+  const className = els.classInput.value || "1";
+  const semester = els.semesterInput.value || "1";
+  const apiName = getTimetableApiName(state.selectedSchool);
+  const notice = state.timetableNotice
+    ? `<p class="detail-notice">${escapeHtml(state.timetableNotice)}</p>`
+    : "";
+
+  els.timetableDetail.innerHTML = `
+    <strong>${formatKoreanDate(state.selectedDate)}</strong>
+    ${notice}
+    <div class="timetable-ready">
+      <span>저장된 조건</span>
+      <b>${escapeHtml(grade)}학년 ${escapeHtml(className)}반 · ${escapeHtml(semester)}학기</b>
+      <p>${apiName ? `선택 학교 기준 준비 API: ${escapeHtml(apiName)}` : "선택 학교의 학교급을 확인한 뒤 v0.6에서 시간표 API를 연결할 예정입니다."}</p>
+    </div>
+    <p class="empty">현재는 시간표 조회 전 단계입니다. 입력값 저장까지만 지원합니다.</p>
+  `;
 }
 
 function renderTabs() {
@@ -615,6 +641,22 @@ function loadSelectedSchool() {
   } catch (error) {
     return null;
   }
+}
+
+
+function saveTimetablePreferences() {
+  localStorage.setItem(TIMETABLE_STORAGE_KEYS.grade, els.gradeInput.value || "1");
+  localStorage.setItem(TIMETABLE_STORAGE_KEYS.className, els.classInput.value || "1");
+  localStorage.setItem(TIMETABLE_STORAGE_KEYS.semester, els.semesterInput.value || "1");
+}
+
+function loadTimetablePreferences() {
+  const savedGrade = localStorage.getItem(TIMETABLE_STORAGE_KEYS.grade);
+  const savedClass = localStorage.getItem(TIMETABLE_STORAGE_KEYS.className);
+  const savedSemester = localStorage.getItem(TIMETABLE_STORAGE_KEYS.semester);
+  if (savedGrade) els.gradeInput.value = savedGrade;
+  if (savedClass) els.classInput.value = savedClass;
+  if (savedSemester) els.semesterInput.value = savedSemester;
 }
 
 function cleanTextLines(value = "") {
