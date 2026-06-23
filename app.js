@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v0.7
-// 시간표 달력 배지 및 조회 결과 저장
+// 우리학교 생활 달력 v0.8.1
+// 오늘 한눈에 보기 표시 개선
 // ============================================================
 
 const API_CONFIG = {
@@ -529,9 +529,11 @@ function renderTodaySummary() {
 
   if (!state.selectedSchool) {
     els.todaySummaryTitle.textContent = "오늘 우리학교";
+    const todayTimetableTitle = document.querySelector("#todayTimetableTitle");
+    if (todayTimetableTitle) todayTimetableTitle.textContent = "🕘 시간표";
     els.todayScheduleSummary.innerHTML = `<p class="empty">학교를 선택하면 오늘 학사일정이 표시됩니다.</p>`;
     els.todayMealSummary.innerHTML = `<p class="empty">학교를 선택하면 오늘 급식정보가 표시됩니다.</p>`;
-    els.todayTimetableSummary.innerHTML = `<p class="empty">학년·반·학기를 입력하고 시간표를 불러오면 오늘 시간표가 표시됩니다.</p>`;
+    els.todayTimetableSummary.innerHTML = `<p class="empty">학년·반을 확인하고 시간표를 불러오면 오늘 시간표가 표시됩니다.</p>`;
     return;
   }
 
@@ -550,16 +552,24 @@ function renderTodaySummary() {
   if (state.mealStatus === "loading") {
     els.todayMealSummary.innerHTML = `<p class="empty">급식정보를 불러오는 중입니다.</p>`;
   } else if (todayMeal && todayMeal.dishes?.length) {
-    els.todayMealSummary.innerHTML = `${todayMeal.calorie ? `<p class="today-calorie">칼로리: ${escapeHtml(todayMeal.calorie)}</p>` : ""}<ul>${todayMeal.dishes.slice(0, 5).map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>${todayMeal.dishes.length > 5 ? `<p class="today-more">외 ${todayMeal.dishes.length - 5}개 메뉴</p>` : ""}`;
+    els.todayMealSummary.innerHTML = `${todayMeal.calorie ? `<p class="today-calorie">칼로리: ${escapeHtml(todayMeal.calorie)}</p>` : ""}<ul>${todayMeal.dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>`;
   } else {
     els.todayMealSummary.innerHTML = `<p class="empty">오늘 급식정보가 없습니다.</p>`;
   }
 
-  const todayTimetable = getTimetableCache(todayKey);
+  const todayGrade = els.gradeInput.value || "1";
+  const todayClassName = els.classInput.value || "1";
+  const todaySemester = getTodaySemester(todayKey);
+  const todayTimetableTitle = document.querySelector("#todayTimetableTitle");
+  if (todayTimetableTitle) {
+    todayTimetableTitle.textContent = `🕘 시간표 ${todayGrade}학년 ${todayClassName}반`;
+  }
+
+  const todayTimetable = getTimetableCacheWithOptions(todayKey, todayGrade, todayClassName, todaySemester);
   if (todayTimetable.length) {
     els.todayTimetableSummary.innerHTML = `<ol class="today-timetable-list">${todayTimetable.slice(0, 7).map((item) => `<li><b>${escapeHtml(item.period)}교시</b> ${escapeHtml(item.subject || "-")}</li>`).join("")}</ol>${todayTimetable.length > 7 ? `<p class="today-more">외 ${todayTimetable.length - 7}교시</p>` : ""}`;
   } else {
-    els.todayTimetableSummary.innerHTML = `<p class="empty">학년·반·학기를 입력하고 시간표를 불러오면 오늘 시간표가 표시됩니다.</p>`;
+    els.todayTimetableSummary.innerHTML = `<p class="empty">학년·반을 확인하고 오늘 시간표를 불러오면 표시됩니다.</p>`;
   }
 }
 
@@ -801,12 +811,18 @@ function loadSelectedSchool() {
 }
 
 function getTimetableCacheKey(dateKey = state.selectedDate) {
+  return getTimetableCacheKeyWithOptions(
+    dateKey,
+    els.gradeInput.value || "1",
+    els.classInput.value || "1",
+    els.semesterInput.value || "1"
+  );
+}
+
+function getTimetableCacheKeyWithOptions(dateKey, grade, className, semester) {
   if (!state.selectedSchool || !dateKey) return "";
   const schoolCode = state.selectedSchool.schoolCode || "unknown";
-  const grade = els.gradeInput.value || "1";
-  const className = els.classInput.value || "1";
-  const semester = els.semesterInput.value || "1";
-  return `${TIMETABLE_CACHE_PREFIX}_${schoolCode}_${dateKey.replaceAll("-", "")}_${grade}_${className}_${semester}`;
+  return `${TIMETABLE_CACHE_PREFIX}_${schoolCode}_${dateKey.replaceAll("-", "")}_${grade || "1"}_${className || "1"}_${semester || "1"}`;
 }
 
 function saveTimetableCache(dateKey, items) {
@@ -821,7 +837,16 @@ function removeTimetableCache(dateKey) {
 }
 
 function getTimetableCache(dateKey = state.selectedDate) {
-  const key = getTimetableCacheKey(dateKey);
+  return getTimetableCacheWithOptions(
+    dateKey,
+    els.gradeInput.value || "1",
+    els.classInput.value || "1",
+    els.semesterInput.value || "1"
+  );
+}
+
+function getTimetableCacheWithOptions(dateKey, grade, className, semester) {
+  const key = getTimetableCacheKeyWithOptions(dateKey, grade, className, semester);
   if (!key) return [];
   try {
     const items = JSON.parse(localStorage.getItem(key) || "[]");
@@ -841,6 +866,27 @@ function restoreTimetableFromCache() {
   state.timetableStatus = cached.length ? "success" : "idle";
   state.timetableMessage = "";
   state.timetableNotice = cached.length ? "저장된 시간표 조회 결과를 보여드려요." : "";
+}
+
+function getTodaySemester(dateKey = formatDateKey(new Date())) {
+  const date = new Date(`${dateKey}T00:00:00`);
+  const month = date.getMonth() + 1;
+
+  if (month >= 3 && month <= 6) return "1";
+  if (month >= 9 || month <= 2) return "2";
+
+  // 7~8월은 여름방학 전/후가 학교마다 달라서 학사일정 기준으로 판단합니다.
+  const schedules = state.schedules || [];
+  const hasSecondSemesterStart = schedules.some((item) => {
+    const text = `${item.title || ""} ${item.content || ""}`;
+    return item.date <= dateKey && /(2학기|개학|개학식|2학기 시작)/.test(text);
+  });
+  if (hasSecondSemesterStart) return "2";
+
+  const savedSemester = localStorage.getItem(TIMETABLE_STORAGE_KEYS.semester);
+  if (savedSemester === "1" || savedSemester === "2") return savedSemester;
+
+  return "1";
 }
 
 function saveTimetablePreferences() {
