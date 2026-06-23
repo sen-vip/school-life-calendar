@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v0.5
-// 시간표 입력 UI 및 입력값 저장 준비
+// 우리학교 생활 달력 v0.6
+// 시간표 API 연결
 // ============================================================
 
 const API_CONFIG = {
@@ -79,6 +79,8 @@ const state = {
   mealMessage: "",
   meal: null,
   timetable: [],
+  timetableStatus: "idle",
+  timetableMessage: "",
   timetableNotice: "",
   schools: []
 };
@@ -211,12 +213,9 @@ function bindEvents() {
     });
   });
 
-  els.loadTimetableBtn.addEventListener("click", () => {
+  els.loadTimetableBtn.addEventListener("click", async () => {
     saveTimetablePreferences();
-    const apiName = getTimetableApiName(state.selectedSchool);
-    state.timetableNotice = apiName
-      ? `시간표 API 연결은 v0.6에서 진행할 예정입니다. 현재는 학년·반·학기 입력값 저장까지만 지원합니다. 준비된 API: ${apiName}`
-      : "시간표 API 연결은 v0.6에서 진행할 예정입니다. 현재는 학년·반·학기 입력값 저장까지만 지원합니다.";
+    await loadTimetable();
     renderTimetableDetail();
   });
 }
@@ -288,6 +287,31 @@ async function fetchMeal() {
   return data.meal ? normalizeMeal(data.meal) : null;
 }
 
+async function fetchTimetable() {
+  if (!state.selectedSchool || !state.selectedDate) return [];
+  const apiName = getTimetableApiName(state.selectedSchool);
+  if (!apiName) {
+    throw new Error("지원하지 않는 학교급");
+  }
+
+  const params = new URLSearchParams({
+    officeCode: state.selectedSchool.officeCode,
+    schoolCode: state.selectedSchool.schoolCode,
+    schoolType: state.selectedSchool.schoolType || state.selectedSchool.schoolName || "",
+    year: String(new Date(`${state.selectedDate}T00:00:00`).getFullYear()),
+    semester: els.semesterInput.value || "1",
+    grade: els.gradeInput.value || "1",
+    className: els.classInput.value || "1",
+    classNm: els.classInput.value || "1",
+    date: compactDate(state.selectedDate)
+  });
+
+  const response = await fetch(`${API_CONFIG.baseUrl}/api/timetable?${params.toString()}`);
+  if (!response.ok) throw new Error("시간표 조회 실패");
+  const data = await response.json();
+  return (data.timetable || []).map(normalizeTimetable).sort((a, b) => Number(a.period) - Number(b.period));
+}
+
 function getTimetableApiName(school) {
   const schoolType = `${school?.schoolType || ""} ${school?.schoolName || ""}`;
   if (/초등/.test(schoolType)) return "elsTimetable";
@@ -348,6 +372,9 @@ async function loadMonthData() {
 async function loadDayData() {
   state.meal = state.mealsByDate[state.selectedDate] || null;
   state.timetable = [];
+  state.timetableStatus = "idle";
+  state.timetableMessage = "";
+  state.timetableNotice = "";
 }
 
 async function loadMeal() {
@@ -356,6 +383,40 @@ async function loadMeal() {
     state.meal = await fetchMeal();
   } catch (error) {
     state.meal = mockMeals[state.selectedDate] || null;
+  }
+}
+
+async function loadTimetable() {
+  if (!state.selectedSchool) {
+    state.timetableStatus = "idle";
+    state.timetableMessage = "학교를 먼저 선택해 주세요.";
+    state.timetable = [];
+    return;
+  }
+
+  const apiName = getTimetableApiName(state.selectedSchool);
+  if (!apiName) {
+    state.timetableStatus = "unsupported";
+    state.timetableMessage = "현재 이 학교급의 시간표 조회는 지원 준비 중입니다.";
+    state.timetable = [];
+    return;
+  }
+
+  state.timetableStatus = "loading";
+  state.timetableMessage = "시간표를 불러오는 중입니다.";
+  state.timetableNotice = "";
+  renderTimetableDetail();
+
+  try {
+    state.timetable = await fetchTimetable();
+    state.timetableStatus = "success";
+    state.timetableMessage = state.timetable.length
+      ? ""
+      : "이 날짜의 시간표 정보가 없습니다. 학년·반·학기를 확인해 주세요.";
+  } catch (error) {
+    state.timetable = [];
+    state.timetableStatus = "error";
+    state.timetableMessage = "시간표 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
   }
 }
 
@@ -495,18 +556,30 @@ function renderTimetableDetail() {
     ? `<p class="detail-notice">${escapeHtml(state.timetableNotice)}</p>`
     : "";
 
+  let body = "";
+  if (!apiName) {
+    body = `<p class="empty">현재 이 학교급의 시간표 조회는 지원 준비 중입니다.</p>`;
+  } else if (state.timetableStatus === "loading") {
+    body = `<p class="empty">시간표를 불러오는 중입니다.</p>`;
+  } else if (state.timetableStatus === "success" && state.timetable.length) {
+    body = `<ol class="timetable-list">${state.timetable.map((item) => `<li><b>${escapeHtml(item.period)}교시</b> ${escapeHtml(item.subject || "-")}</li>`).join("")}</ol>`;
+  } else if (state.timetableMessage) {
+    body = `<p class="empty">${escapeHtml(state.timetableMessage)}</p>`;
+  } else {
+    body = `<p class="empty">학년·반·학기를 입력한 뒤 시간표 불러오기를 눌러 주세요.</p>`;
+  }
+
   els.timetableDetail.innerHTML = `
     <strong>${formatKoreanDate(state.selectedDate)}</strong>
     ${notice}
     <div class="timetable-ready">
-      <span>저장된 조건</span>
+      <span>조회 조건</span>
       <b>${escapeHtml(grade)}학년 ${escapeHtml(className)}반 · ${escapeHtml(semester)}학기</b>
-      <p>${apiName ? `선택 학교 기준 준비 API: ${escapeHtml(apiName)}` : "선택 학교의 학교급을 확인한 뒤 v0.6에서 시간표 API를 연결할 예정입니다."}</p>
+      <p>${apiName ? `선택 학교 기준 시간표 API: ${escapeHtml(apiName)}` : "선택 학교의 학교급을 확인할 수 없습니다."}</p>
     </div>
-    <p class="empty">현재는 시간표 조회 전 단계입니다. 입력값 저장까지만 지원합니다.</p>
+    ${body}
   `;
 }
-
 function renderTabs() {
   els.tabs.forEach((button) => button.classList.toggle("active", button.dataset.tab === state.activeTab));
 }
@@ -618,6 +691,14 @@ function normalizeMeal(meal = {}) {
     nutrition: meal.nutrition || meal.NTR_INFO || "",
     origin: meal.origin || meal.ORPLC_INFO || "",
     allergy: meal.allergy || "식단명 숫자는 알레르기 유발 식재료 번호입니다."
+  };
+}
+
+function normalizeTimetable(item = {}) {
+  return {
+    period: item.period || item.PERIO || "",
+    subject: item.subject || item.ITRT_CNTNT || item.CLSRM_NM || "-",
+    date: item.date || item.ALL_TI_YMD || state.selectedDate
   };
 }
 
