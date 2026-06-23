@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>우리학교 생활 달력</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏫%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <a class="brand-home" href="#home" aria-label="처음으로">
+        <span class="brand-icon">🏫</span>
+        <span id="topSchoolName">우리학교 생활 달력</span>
+      </a>
+      <nav class="top-actions" aria-label="상단 메뉴">
+        <a class="outline-link" href="#search">학교변경</a>
+        <a class="help-link" href="https://github.com/sen-vip/school-life-calendar#readme" target="_blank" rel="noopener noreferrer">도움말</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <header class="hero" id="home">
+      <div class="hero-top">
+        <span class="brand-pill">확장판 v0.3</span>
+        <span class="hero-note">학사일정 · 급식 · 시간표 준비</span>
+      </div>
+      <h1>학사일정부터 급식, 시간표까지 한 번에</h1>
+      <p>학교를 선택하면 월별 학사일정을 불러와 달력 안에 표시합니다.</p>
+    </header>
+
+    <main>
+      <section class="card search-card" id="search">
+        <div class="card-heading">
+          <div>
+            <span class="kicker">학교 찾기</span>
+            <h2 id="searchTitle">지역과 학교명을 입력해 주세요</h2>
+          </div>
+          <button type="button" class="ghost-button" id="resetBtn">다시 선택</button>
+        </div>
+        <form class="search-form" id="schoolSearchForm">
+          <select id="officeCode" aria-label="시도교육청 선택"></select>
+          <input id="schoolKeyword" type="search" placeholder="예: 학돌중, 서울학돌초" autocomplete="off" />
+          <button type="submit">검색</button>
+        </form>
+        <div class="quick-row">
+          <button type="button" data-office="B10" data-keyword="">서울</button>
+          <button type="button" data-keyword="초등학교">초등학교</button>
+          <button type="button" data-keyword="중학교">중학교</button>
+          <button type="button" data-keyword="고등학교">고등학교</button>
+        </div>
+        <div id="schoolResults" class="school-results" aria-live="polite"></div>
+      </section>
+
+      <section class="selected-card" id="selectedCard">
+        <div class="selected-icon">🏫</div>
+        <div>
+          <span class="kicker">현재 선택한 학교</span>
+          <h2 id="selectedSchoolName">학교를 선택하면 생활 달력이 열려요.</h2>
+          <p id="selectedSchoolMeta">학사일정은 달력에 표시되고, 급식·시간표는 날짜를 누르면 확인할 수 있어요.</p>
+        </div>
+      </section>
+
+      <section class="card tools-card" id="calendarArea">
+        <div class="toolbar">
+          <button type="button" id="prevMonth" aria-label="이전 달">‹</button>
+          <div>
+            <span class="kicker">월별 달력</span>
+            <h2 id="monthTitle">2026년 6월</h2>
+          </div>
+          <button type="button" id="nextMonth" aria-label="다음 달">›</button>
+          <button type="button" id="todayBtn">오늘</button>
+        </div>
+
+        <div class="view-tabs" role="tablist" aria-label="생활 정보 보기">
+          <button type="button" class="active" data-tab="all">오늘 한눈에</button>
+          <button type="button" data-tab="schedule">학사일정</button>
+          <button type="button" data-tab="meal">급식</button>
+          <button type="button" data-tab="timetable">시간표</button>
+        </div>
+
+        <div class="calendar" id="calendar" aria-label="월별 학교 생활 달력"></div>
+      </section>
+
+      <section class="detail-grid" id="detailArea">
+        <article class="card detail-card schedule-detail" data-panel="schedule">
+          <div class="detail-title">
+            <span>📅</span>
+            <h2>학사일정</h2>
+          </div>
+          <div id="scheduleDetail" class="detail-body">학교와 날짜를 선택해 주세요.</div>
+        </article>
+
+        <article class="card detail-card meal-detail" data-panel="meal">
+          <div class="detail-title">
+            <span>🍱</span>
+            <h2>급식</h2>
+          </div>
+          <div id="mealDetail" class="detail-body">학교와 날짜를 선택해 주세요.</div>
+        </article>
+
+        <article class="card detail-card timetable-detail" data-panel="timetable">
+          <div class="detail-title">
+            <span>🕘</span>
+            <h2>시간표</h2>
+          </div>
+          <div class="timetable-controls">
+            <label>학년 <input id="gradeInput" type="number" min="1" max="6" value="1" /></label>
+            <label>반 <input id="classInput" type="number" min="1" max="20" value="1" /></label>
+            <label>학기
+              <select id="semesterInput">
+                <option value="1">1학기</option>
+                <option value="2">2학기</option>
+              </select>
+            </label>
+            <button type="button" id="loadTimetableBtn">시간표 준비 중</button>
+          </div>
+          <div id="timetableDetail" class="detail-body">학년·반을 입력한 뒤 조회해 주세요.</div>
+        </article>
+      </section>
+
+      <section class="notice">
+        <strong>v0.3 학사일정 연결</strong>
+        <p>학교를 선택하면 해당 월의 학사일정을 불러오고, 일정이 있는 날짜에 작은 배지를 표시합니다.</p>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
