@@ -376,6 +376,30 @@ button { cursor: pointer; }
   color: var(--ink);
   letter-spacing: -0.02em;
 }
+
+.title-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin-left: 7px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.meal-kcal {
+  background: #fff3df;
+  color: #9a5a00;
+  border: 1px solid #ffe2b6;
+}
+.class-badge {
+  background: #eef5ff;
+  color: var(--navy-2);
+  border: 1px solid #d7e7ff;
+}
 .today-summary-body {
   color: var(--ink);
   font-size: 14px;

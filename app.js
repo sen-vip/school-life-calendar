@@ -1,6 +1,6 @@
 // ============================================================
 // 우리학교 생활 달력 v0.8.1
-// 오늘 한눈에 보기 표시 개선
+// 오늘 한눈에 보기 표시 개선 v0.8.2
 // ============================================================
 
 const API_CONFIG = {
@@ -529,8 +529,10 @@ function renderTodaySummary() {
 
   if (!state.selectedSchool) {
     els.todaySummaryTitle.textContent = "오늘 우리학교";
+    const todayMealTitle = document.querySelector("#todayMealTitle");
+    if (todayMealTitle) todayMealTitle.innerHTML = "🍱 급식";
     const todayTimetableTitle = document.querySelector("#todayTimetableTitle");
-    if (todayTimetableTitle) todayTimetableTitle.textContent = "🕘 시간표";
+    if (todayTimetableTitle) todayTimetableTitle.innerHTML = "🕘 시간표";
     els.todayScheduleSummary.innerHTML = `<p class="empty">학교를 선택하면 오늘 학사일정이 표시됩니다.</p>`;
     els.todayMealSummary.innerHTML = `<p class="empty">학교를 선택하면 오늘 급식정보가 표시됩니다.</p>`;
     els.todayTimetableSummary.innerHTML = `<p class="empty">학년·반을 확인하고 시간표를 불러오면 오늘 시간표가 표시됩니다.</p>`;
@@ -549,10 +551,16 @@ function renderTodaySummary() {
   }
 
   const todayMeal = state.todayMeal;
+  const todayMealTitle = document.querySelector("#todayMealTitle");
+  if (todayMealTitle) {
+    todayMealTitle.innerHTML = todayMeal?.calorie
+      ? `🍱 급식 <span class="title-badge meal-kcal">${escapeHtml(todayMeal.calorie)}</span>`
+      : "🍱 급식";
+  }
   if (state.mealStatus === "loading") {
     els.todayMealSummary.innerHTML = `<p class="empty">급식정보를 불러오는 중입니다.</p>`;
   } else if (todayMeal && todayMeal.dishes?.length) {
-    els.todayMealSummary.innerHTML = `${todayMeal.calorie ? `<p class="today-calorie">칼로리: ${escapeHtml(todayMeal.calorie)}</p>` : ""}<ul>${todayMeal.dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>`;
+    els.todayMealSummary.innerHTML = `<ul>${todayMeal.dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>`;
   } else {
     els.todayMealSummary.innerHTML = `<p class="empty">오늘 급식정보가 없습니다.</p>`;
   }
@@ -562,7 +570,7 @@ function renderTodaySummary() {
   const todaySemester = getTodaySemester(todayKey);
   const todayTimetableTitle = document.querySelector("#todayTimetableTitle");
   if (todayTimetableTitle) {
-    todayTimetableTitle.textContent = `🕘 시간표 ${todayGrade}학년 ${todayClassName}반`;
+    todayTimetableTitle.innerHTML = `🕘 시간표 <span class="title-badge class-badge">${escapeHtml(todayGrade)}-${escapeHtml(todayClassName)}</span>`;
   }
 
   const todayTimetable = getTimetableCacheWithOptions(todayKey, todayGrade, todayClassName, todaySemester);
