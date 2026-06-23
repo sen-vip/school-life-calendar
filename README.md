@@ -110,7 +110,7 @@ NEIS_API_KEY=발급받은_NEIS_API_KEY
 현재 프론트는 아래 프록시 주소를 사용합니다.
 
 ```js
-baseUrl: "https://school-calendar-proxy.onrender.com"
+baseUrl: "https://school-life-calendar-proxy.onrender.com"
 ```
 
 본인 Render 주소가 다르면 `app.js`의 `API_CONFIG.baseUrl` 값을 수정하세요.

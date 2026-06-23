@@ -5,7 +5,7 @@
 
 const API_CONFIG = {
   useMockOnError: true,
-  baseUrl: "https://school-calendar-proxy.onrender.com"
+  baseUrl: "https://school-life-calendar-proxy.onrender.com"
 };
 
 const STORAGE_KEY = "schoolLifeCalendar.selectedSchool";
