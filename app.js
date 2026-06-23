@@ -79,6 +79,8 @@ const state = {
   mealStatus: "idle",
   mealMessage: "",
   meal: null,
+  todaySchedules: [],
+  todayMeal: null,
   timetable: [],
   timetableStatus: "idle",
   timetableMessage: "",
@@ -97,6 +99,12 @@ const els = {
   resetBtn: document.querySelector("#resetBtn"),
   selectedSchoolName: document.querySelector("#selectedSchoolName"),
   selectedSchoolMeta: document.querySelector("#selectedSchoolMeta"),
+  todaySummaryCard: document.querySelector("#todaySummaryCard"),
+  todaySummaryTitle: document.querySelector("#todaySummaryTitle"),
+  todaySummaryDate: document.querySelector("#todaySummaryDate"),
+  todayScheduleSummary: document.querySelector("#todayScheduleSummary"),
+  todayMealSummary: document.querySelector("#todayMealSummary"),
+  todayTimetableSummary: document.querySelector("#todayTimetableSummary"),
   monthTitle: document.querySelector("#monthTitle"),
   calendar: document.querySelector("#calendar"),
   prevMonth: document.querySelector("#prevMonth"),
@@ -155,6 +163,8 @@ function bindEvents() {
     state.mealStatus = "idle";
     state.mealMessage = "";
     state.meal = null;
+    state.todaySchedules = [];
+    state.todayMeal = null;
     state.timetable = [];
     state.schools = [];
     els.schoolResults.innerHTML = "";
@@ -206,12 +216,14 @@ function bindEvents() {
       saveTimetablePreferences();
       restoreTimetableFromCache();
       renderCalendar();
+      renderTodaySummary();
       renderTimetableDetail();
     });
     input.addEventListener("change", () => {
       saveTimetablePreferences();
       restoreTimetableFromCache();
       renderCalendar();
+      renderTodaySummary();
       renderTimetableDetail();
     });
   });
@@ -369,6 +381,7 @@ async function loadMonthData() {
       : "급식정보를 불러오지 못했어요. 프록시 서버 주소와 NEIS API 키를 확인해 주세요.";
   }
 
+  updateTodaySnapshot();
   await loadDayData();
 }
 
@@ -420,6 +433,7 @@ async function loadTimetable() {
       removeTimetableCache(state.selectedDate);
     }
     renderCalendar();
+    renderTodaySummary();
   } catch (error) {
     state.timetable = [];
     state.timetableStatus = "error";
@@ -432,6 +446,7 @@ function renderAll() {
   renderSelectedSchool();
   renderMonthTitle();
   renderCalendar();
+  renderTodaySummary();
   renderDetails();
   renderTabs();
   renderPanels();
@@ -493,6 +508,59 @@ function renderCalendar() {
     });
   }
   els.calendar.innerHTML = html;
+}
+
+
+function updateTodaySnapshot() {
+  const todayKey = formatDateKey(new Date());
+  const todayMonthPrefix = todayKey.slice(0, 7);
+  const currentMonthPrefix = `${state.currentDate.getFullYear()}-${pad(state.currentDate.getMonth() + 1)}`;
+  if (todayMonthPrefix !== currentMonthPrefix) return;
+
+  state.todaySchedules = state.schedules.filter((item) => item.date === todayKey);
+  state.todayMeal = state.mealsByDate[todayKey] || null;
+}
+
+function renderTodaySummary() {
+  if (!els.todaySummaryCard) return;
+
+  const todayKey = formatDateKey(new Date());
+  els.todaySummaryDate.textContent = formatKoreanDate(todayKey);
+
+  if (!state.selectedSchool) {
+    els.todaySummaryTitle.textContent = "오늘 우리학교";
+    els.todayScheduleSummary.innerHTML = `<p class="empty">학교를 선택하면 오늘 학사일정이 표시됩니다.</p>`;
+    els.todayMealSummary.innerHTML = `<p class="empty">학교를 선택하면 오늘 급식정보가 표시됩니다.</p>`;
+    els.todayTimetableSummary.innerHTML = `<p class="empty">학년·반·학기를 입력하고 시간표를 불러오면 오늘 시간표가 표시됩니다.</p>`;
+    return;
+  }
+
+  els.todaySummaryTitle.textContent = `${state.selectedSchool.schoolName} 오늘`;
+
+  const todaySchedules = state.todaySchedules || [];
+  if (state.scheduleStatus === "loading") {
+    els.todayScheduleSummary.innerHTML = `<p class="empty">학사일정을 불러오는 중입니다.</p>`;
+  } else if (todaySchedules.length) {
+    els.todayScheduleSummary.innerHTML = `<ul>${todaySchedules.slice(0, 4).map((item) => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul>${todaySchedules.length > 4 ? `<p class="today-more">외 ${todaySchedules.length - 4}건</p>` : ""}`;
+  } else {
+    els.todayScheduleSummary.innerHTML = `<p class="empty">오늘 등록된 학사일정이 없습니다.</p>`;
+  }
+
+  const todayMeal = state.todayMeal;
+  if (state.mealStatus === "loading") {
+    els.todayMealSummary.innerHTML = `<p class="empty">급식정보를 불러오는 중입니다.</p>`;
+  } else if (todayMeal && todayMeal.dishes?.length) {
+    els.todayMealSummary.innerHTML = `${todayMeal.calorie ? `<p class="today-calorie">칼로리: ${escapeHtml(todayMeal.calorie)}</p>` : ""}<ul>${todayMeal.dishes.slice(0, 5).map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>${todayMeal.dishes.length > 5 ? `<p class="today-more">외 ${todayMeal.dishes.length - 5}개 메뉴</p>` : ""}`;
+  } else {
+    els.todayMealSummary.innerHTML = `<p class="empty">오늘 급식정보가 없습니다.</p>`;
+  }
+
+  const todayTimetable = getTimetableCache(todayKey);
+  if (todayTimetable.length) {
+    els.todayTimetableSummary.innerHTML = `<ol class="today-timetable-list">${todayTimetable.slice(0, 7).map((item) => `<li><b>${escapeHtml(item.period)}교시</b> ${escapeHtml(item.subject || "-")}</li>`).join("")}</ol>${todayTimetable.length > 7 ? `<p class="today-more">외 ${todayTimetable.length - 7}교시</p>` : ""}`;
+  } else {
+    els.todayTimetableSummary.innerHTML = `<p class="empty">학년·반·학기를 입력하고 시간표를 불러오면 오늘 시간표가 표시됩니다.</p>`;
+  }
 }
 
 function renderDetails() {
