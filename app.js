@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v0.6
-// 시간표 API 연결
+// 우리학교 생활 달력 v0.7
+// 시간표 달력 배지 및 조회 결과 저장
 // ============================================================
 
 const API_CONFIG = {
@@ -9,6 +9,7 @@ const API_CONFIG = {
 };
 
 const STORAGE_KEY = "schoolLifeCalendar.selectedSchool";
+const TIMETABLE_CACHE_PREFIX = "schoolLifeTimetableCache";
 const TIMETABLE_STORAGE_KEYS = {
   grade: "schoolLifeTimetableGrade",
   className: "schoolLifeTimetableClass",
@@ -203,12 +204,14 @@ function bindEvents() {
   [els.gradeInput, els.classInput, els.semesterInput].forEach((input) => {
     input.addEventListener("input", () => {
       saveTimetablePreferences();
-      state.timetableNotice = "";
+      restoreTimetableFromCache();
+      renderCalendar();
       renderTimetableDetail();
     });
     input.addEventListener("change", () => {
       saveTimetablePreferences();
-      state.timetableNotice = "";
+      restoreTimetableFromCache();
+      renderCalendar();
       renderTimetableDetail();
     });
   });
@@ -371,10 +374,7 @@ async function loadMonthData() {
 
 async function loadDayData() {
   state.meal = state.mealsByDate[state.selectedDate] || null;
-  state.timetable = [];
-  state.timetableStatus = "idle";
-  state.timetableMessage = "";
-  state.timetableNotice = "";
+  restoreTimetableFromCache();
 }
 
 async function loadMeal() {
@@ -413,6 +413,13 @@ async function loadTimetable() {
     state.timetableMessage = state.timetable.length
       ? ""
       : "이 날짜의 시간표 정보가 없습니다. 학년·반·학기를 확인해 주세요.";
+
+    if (state.timetable.length) {
+      saveTimetableCache(state.selectedDate, state.timetable);
+    } else {
+      removeTimetableCache(state.selectedDate);
+    }
+    renderCalendar();
   } catch (error) {
     state.timetable = [];
     state.timetableStatus = "error";
@@ -472,7 +479,7 @@ function renderCalendar() {
 
     html += `<button type="button" class="${classes}" data-date="${key}" aria-label="${key}">
       <span class="day-number">${date.getDate()}</span>
-      <span class="day-markers">${isCurrentMonth ? renderDayMarkers(daySchedules, dayMeal) : ""}</span>
+      <span class="day-markers">${isCurrentMonth ? renderDayMarkers(daySchedules, dayMeal, key) : ""}</span>
     </button>`;
   }
   html += `</div>`;
@@ -632,11 +639,12 @@ function renderSchoolResults(schools, notice = "") {
   });
 }
 
-function renderDayMarkers(scheduleItems, meal) {
+function renderDayMarkers(scheduleItems, meal, dateKey) {
   const markers = [];
   const scheduleMarker = renderScheduleMarkers(scheduleItems);
   if (scheduleMarker) markers.push(scheduleMarker);
   if (meal) markers.push(`<span class="marker meal">🍱 급식</span>`);
+  if (hasTimetableCache(dateKey)) markers.push(`<span class="marker timetable">🕘 시간표</span>`);
   return markers.join("");
 }
 
@@ -724,6 +732,48 @@ function loadSelectedSchool() {
   }
 }
 
+function getTimetableCacheKey(dateKey = state.selectedDate) {
+  if (!state.selectedSchool || !dateKey) return "";
+  const schoolCode = state.selectedSchool.schoolCode || "unknown";
+  const grade = els.gradeInput.value || "1";
+  const className = els.classInput.value || "1";
+  const semester = els.semesterInput.value || "1";
+  return `${TIMETABLE_CACHE_PREFIX}_${schoolCode}_${dateKey.replaceAll("-", "")}_${grade}_${className}_${semester}`;
+}
+
+function saveTimetableCache(dateKey, items) {
+  const key = getTimetableCacheKey(dateKey);
+  if (!key || !items?.length) return;
+  localStorage.setItem(key, JSON.stringify(items));
+}
+
+function removeTimetableCache(dateKey) {
+  const key = getTimetableCacheKey(dateKey);
+  if (key) localStorage.removeItem(key);
+}
+
+function getTimetableCache(dateKey = state.selectedDate) {
+  const key = getTimetableCacheKey(dateKey);
+  if (!key) return [];
+  try {
+    const items = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(items) ? items : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function hasTimetableCache(dateKey) {
+  return getTimetableCache(dateKey).length > 0;
+}
+
+function restoreTimetableFromCache() {
+  const cached = getTimetableCache(state.selectedDate);
+  state.timetable = cached;
+  state.timetableStatus = cached.length ? "success" : "idle";
+  state.timetableMessage = "";
+  state.timetableNotice = cached.length ? "저장된 시간표 조회 결과를 보여드려요." : "";
+}
 
 function saveTimetablePreferences() {
   localStorage.setItem(TIMETABLE_STORAGE_KEYS.grade, els.gradeInput.value || "1");
