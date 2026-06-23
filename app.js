@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v0.8.1
-// 오늘 한눈에 보기 표시 개선 v0.8.2
+// 우리학교 생활 달력 v0.9
+// 공유/복사 기능
 // ============================================================
 
 const API_CONFIG = {
@@ -102,6 +102,10 @@ const els = {
   todaySummaryCard: document.querySelector("#todaySummaryCard"),
   todaySummaryTitle: document.querySelector("#todaySummaryTitle"),
   todaySummaryDate: document.querySelector("#todaySummaryDate"),
+  copyTodayBtn: document.querySelector("#copyTodayBtn"),
+  selectedCopyDate: document.querySelector("#selectedCopyDate"),
+  copySelectedBtn: document.querySelector("#copySelectedBtn"),
+  copyToast: document.querySelector("#copyToast"),
   todayScheduleSummary: document.querySelector("#todayScheduleSummary"),
   todayMealSummary: document.querySelector("#todayMealSummary"),
   todayTimetableSummary: document.querySelector("#todayTimetableSummary"),
@@ -233,6 +237,18 @@ function bindEvents() {
     await loadTimetable();
     renderTimetableDetail();
   });
+
+  if (els.copyTodayBtn) {
+    els.copyTodayBtn.addEventListener("click", async () => {
+      await copyText(buildTodayCopyText(), "오늘 내용을 복사했어요. 메신저에 바로 붙여넣을 수 있어요.");
+    });
+  }
+
+  if (els.copySelectedBtn) {
+    els.copySelectedBtn.addEventListener("click", async () => {
+      await copyText(buildSelectedDateCopyText(), "선택 날짜 내용을 복사했어요. 메신저에 바로 붙여넣을 수 있어요.");
+    });
+  }
 }
 
 async function handleSchoolSearch(fallbackKeyword = "") {
@@ -582,9 +598,15 @@ function renderTodaySummary() {
 }
 
 function renderDetails() {
+  renderSelectedCopyStrip();
   renderScheduleDetail();
   renderMealDetail();
   renderTimetableDetail();
+}
+
+function renderSelectedCopyStrip() {
+  if (!els.selectedCopyDate) return;
+  els.selectedCopyDate.textContent = state.selectedDate ? formatKoreanDate(state.selectedDate) : "날짜를 선택해 주세요.";
 }
 
 function renderScheduleDetail() {
@@ -749,6 +771,118 @@ function getScheduleMarkerLabel(items) {
   if (/체험|행사|축제|운동회|공개수업|자치회/.test(titles)) return "📅 행사";
   if (items.length > 1) return `📅 일정 ${items.length}`;
   return `📅 ${items[0].title}`;
+}
+
+
+async function copyText(text, successMessage) {
+  if (!text || !state.selectedSchool) {
+    showCopyToast("학교를 먼저 선택해 주세요.", true);
+    return;
+  }
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    showCopyToast(successMessage || "복사했어요.");
+  } catch (error) {
+    showCopyToast("복사에 실패했어요. 다시 시도해 주세요.", true);
+  }
+}
+
+function showCopyToast(message, isError = false) {
+  if (!els.copyToast) return;
+  els.copyToast.textContent = message;
+  els.copyToast.classList.toggle("error", isError);
+  els.copyToast.classList.add("show");
+  window.clearTimeout(showCopyToast.timer);
+  showCopyToast.timer = window.setTimeout(() => {
+    els.copyToast.classList.remove("show");
+  }, 2400);
+}
+
+function buildTodayCopyText() {
+  if (!state.selectedSchool) return "";
+  const todayKey = formatDateKey(new Date());
+  const grade = els.gradeInput.value || "1";
+  const className = els.classInput.value || "1";
+  const semester = getTodaySemester(todayKey);
+  const todaySchedules = state.todaySchedules || [];
+  const todayMeal = state.todayMeal;
+  const todayTimetable = getTimetableCacheWithOptions(todayKey, grade, className, semester);
+
+  return buildDayCopyText({
+    title: `[${state.selectedSchool.schoolName} 오늘]`,
+    dateKey: todayKey,
+    schedules: todaySchedules,
+    meal: todayMeal,
+    timetable: todayTimetable,
+    timetableTitle: `🕘 시간표 ${grade}학년 ${className}반`,
+    noTimetableText: "- 저장된 시간표 없음"
+  });
+}
+
+function buildSelectedDateCopyText() {
+  if (!state.selectedSchool) return "";
+  const selectedSchedules = state.schedules.filter((item) => item.date === state.selectedDate);
+  const selectedMeal = state.mealsByDate[state.selectedDate] || state.meal || null;
+  const selectedTimetable = getTimetableCache(state.selectedDate);
+
+  return buildDayCopyText({
+    title: `[${state.selectedSchool.schoolName}]`,
+    dateKey: state.selectedDate,
+    schedules: selectedSchedules,
+    meal: selectedMeal,
+    timetable: selectedTimetable,
+    timetableTitle: "🕘 시간표",
+    noTimetableText: "- 시간표를 불러온 기록이 없습니다."
+  });
+}
+
+function buildDayCopyText({ title, dateKey, schedules, meal, timetable, timetableTitle, noTimetableText }) {
+  const lines = [title, "", formatKoreanDate(dateKey), ""];
+
+  lines.push("📅 학사일정");
+  if (schedules?.length) {
+    schedules.forEach((item) => {
+      lines.push(`- ${plainText(item.title)}${item.content ? `: ${plainText(item.content)}` : ""}`);
+    });
+  } else {
+    lines.push("- 등록된 학사일정 없음");
+  }
+
+  lines.push("", "🍱 급식");
+  if (meal?.dishes?.length) {
+    meal.dishes.forEach((dish) => lines.push(`- ${plainText(dish)}`));
+    if (meal.calorie) lines.push(`칼로리: ${plainText(meal.calorie)}`);
+  } else {
+    lines.push("- 급식정보 없음");
+  }
+
+  lines.push("", timetableTitle || "🕘 시간표");
+  if (timetable?.length) {
+    timetable.forEach((item) => lines.push(`${plainText(item.period)}교시 ${plainText(item.subject || "-")}`));
+  } else {
+    lines.push(noTimetableText || "- 저장된 시간표 없음");
+  }
+
+  return lines.join("\n");
+}
+
+function plainText(value = "") {
+  const div = document.createElement("div");
+  div.innerHTML = String(value).replace(/<br\s*\/?\s*>/gi, "\n");
+  return div.textContent.replace(/\s+/g, " ").trim();
 }
 
 function normalizeSchool(school = {}) {
