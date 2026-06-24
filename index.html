@@ -45,9 +45,18 @@
           <div class="setting-panel school-setting-panel">
             <span class="setting-label">학교명 검색</span>
             <form class="search-form" id="schoolSearchForm">
-              <select id="officeCode" aria-label="시도교육청 선택"></select>
-              <input id="schoolKeyword" type="search" placeholder="예: 학돌중, 서울학돌초" autocomplete="off" />
-              <button type="submit">검색</button>
+              <label class="search-field">
+                <span>학교급</span>
+                <select id="officeCode" aria-label="시도교육청 선택"></select>
+              </label>
+              <label class="search-field">
+                <span>학교명</span>
+                <input id="schoolKeyword" type="search" placeholder="예: 학돌중, 서울학돌초" autocomplete="off" />
+              </label>
+              <div class="search-field search-submit-field">
+                <span aria-hidden="true">검색</span>
+                <button type="submit">검색</button>
+              </div>
             </form>
             <div class="quick-row">
               <button type="button" data-office="B10" data-keyword="">서울</button>
