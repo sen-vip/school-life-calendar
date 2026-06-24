@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v0.9
-// 공유/복사 기능
+// 우리학교 생활 달력 v1.0 Stable
+// 안정판 정리
 // ============================================================
 
 const API_CONFIG = {
@@ -264,7 +264,7 @@ async function handleSchoolSearch(fallbackKeyword = "") {
     renderSchoolResults(schools);
   } catch (error) {
     state.schools = searchMockSchools(keyword, els.officeCode.value);
-    renderSchoolResults(state.schools, "프록시 서버 연결이 안 되어 예시 데이터로 보여드려요.");
+    renderSchoolResults([], "학교 검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
   }
 }
 
@@ -375,8 +375,8 @@ async function loadMonthData() {
     state.schedules = fallback;
     state.scheduleStatus = fallback.length ? "mock" : "error";
     state.scheduleMessage = fallback.length
-      ? "프록시 서버 연결이 안 되어 예시 학사일정으로 보여드려요."
-      : "학사일정을 불러오지 못했어요. 프록시 서버 주소와 NEIS API 키를 확인해 주세요.";
+      ? "학사일정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+      : "학사일정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
   }
 
   try {
@@ -393,8 +393,8 @@ async function loadMonthData() {
     state.mealsByDate = Object.fromEntries(fallbackMeals.map((meal) => [meal.date, meal]));
     state.mealStatus = fallbackMeals.length ? "mock" : "error";
     state.mealMessage = fallbackMeals.length
-      ? "프록시 서버 연결이 안 되어 예시 급식정보로 보여드려요."
-      : "급식정보를 불러오지 못했어요. 프록시 서버 주소와 NEIS API 키를 확인해 주세요.";
+      ? "급식정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+      : "급식정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
   }
 
   updateTodaySnapshot();
@@ -426,7 +426,7 @@ async function loadTimetable() {
   const apiName = getTimetableApiName(state.selectedSchool);
   if (!apiName) {
     state.timetableStatus = "unsupported";
-    state.timetableMessage = "현재 이 학교급의 시간표 조회는 지원 준비 중입니다.";
+    state.timetableMessage = "현재 이 학교급의 시간표 조회는 아직 지원하지 않습니다.";
     state.timetable = [];
     return;
   }
@@ -673,7 +673,7 @@ function renderTimetableDetail() {
 
   let body = "";
   if (!apiName) {
-    body = `<p class="empty">현재 이 학교급의 시간표 조회는 지원 준비 중입니다.</p>`;
+    body = `<p class="empty">현재 이 학교급의 시간표 조회는 아직 지원하지 않습니다.</p>`;
   } else if (state.timetableStatus === "loading") {
     body = `<p class="empty">시간표를 불러오는 중입니다.</p>`;
   } else if (state.timetableStatus === "success" && state.timetable.length) {
@@ -828,7 +828,7 @@ function buildTodayCopyText() {
     meal: todayMeal,
     timetable: todayTimetable,
     timetableTitle: `🕘 시간표 ${grade}학년 ${className}반`,
-    noTimetableText: "- 저장된 시간표 없음"
+    noTimetableText: "- 아직 불러온 시간표가 없습니다."
   });
 }
 
@@ -858,7 +858,7 @@ function buildDayCopyText({ title, dateKey, schedules, meal, timetable, timetabl
       lines.push(`- ${plainText(item.title)}${item.content ? `: ${plainText(item.content)}` : ""}`);
     });
   } else {
-    lines.push("- 등록된 학사일정 없음");
+    lines.push("- 등록된 학사일정이 없습니다.");
   }
 
   lines.push("", "🍱 급식");
@@ -866,20 +866,21 @@ function buildDayCopyText({ title, dateKey, schedules, meal, timetable, timetabl
     meal.dishes.forEach((dish) => lines.push(`- ${plainText(dish)}`));
     if (meal.calorie) lines.push(`칼로리: ${plainText(meal.calorie)}`);
   } else {
-    lines.push("- 급식정보 없음");
+    lines.push("- 급식정보가 없습니다.");
   }
 
   lines.push("", timetableTitle || "🕘 시간표");
   if (timetable?.length) {
     timetable.forEach((item) => lines.push(`${plainText(item.period)}교시 ${plainText(item.subject || "-")}`));
   } else {
-    lines.push(noTimetableText || "- 저장된 시간표 없음");
+    lines.push(noTimetableText || "- 아직 불러온 시간표가 없습니다.");
   }
 
   return lines.join("\n");
 }
 
 function plainText(value = "") {
+  if (value === null || value === undefined) return "";
   const div = document.createElement("div");
   div.innerHTML = String(value).replace(/<br\s*\/?\s*>/gi, "\n");
   return div.textContent.replace(/\s+/g, " ").trim();
