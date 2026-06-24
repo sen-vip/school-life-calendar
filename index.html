@@ -24,11 +24,11 @@
   <div class="app-shell">
     <header class="hero" id="home">
       <div class="hero-top">
-        <span class="brand-pill">v1.0 Stable</span>
-        <span class="hero-note">안정판</span>
+        <span class="brand-pill">v1.1 Stable</span>
+        <span class="hero-note">내 학교 저장 업데이트</span>
       </div>
       <h1>학사일정부터 급식, 시간표까지 한 번에</h1>
-      <p>학교를 검색하면 학사일정, 급식, 시간표를 한 번에 확인할 수 있어요. 오늘 필요한 내용은 바로 복사해서 공유할 수 있습니다.</p>
+      <p>학교를 검색하면 학사일정, 급식, 시간표를 한 번에 확인할 수 있어요. 한 번 선택한 학교와 학년·반은 이 기기에 저장됩니다.</p>
     </header>
 
     <main>
@@ -38,7 +38,7 @@
             <span class="kicker">학교 찾기</span>
             <h2 id="searchTitle">지역과 학교명을 입력해 주세요</h2>
           </div>
-          <button type="button" class="ghost-button" id="resetBtn">다시 선택</button>
+          <button type="button" class="ghost-button" id="resetBtn">저장 초기화</button>
         </div>
         <form class="search-form" id="schoolSearchForm">
           <select id="officeCode" aria-label="시도교육청 선택"></select>
@@ -51,6 +51,7 @@
           <button type="button" data-keyword="중학교">중학교</button>
           <button type="button" data-keyword="고등학교">고등학교</button>
         </div>
+        <p class="save-helper">이 기기에서 선택한 학교와 학년·반이 저장돼요.</p>
         <div id="schoolResults" class="school-results" aria-live="polite"></div>
       </section>
 
@@ -152,13 +153,14 @@
             </label>
             <button type="button" id="loadTimetableBtn">시간표 불러오기</button>
           </div>
+          <p class="save-helper timetable-save-helper">입력한 학년·반·학기도 다음 접속 때 유지돼요.</p>
           <div id="timetableDetail" class="detail-body">학년·반·학기를 입력한 뒤 시간표 불러오기를 눌러 주세요.</div>
         </article>
       </section>
 
       <section class="notice">
-        <strong>v1.0 Stable</strong>
-        <p>학사일정, 급식, 시간표, 오늘 한눈에 보기, 복사 기능을 하나의 흐름으로 정리한 첫 안정판입니다.</p>
+        <strong>v1.1 Stable</strong>
+        <p>내 학교와 학년·반 저장 기능을 추가한 안정판입니다.</p>
       </section>
     </main>
   </div>

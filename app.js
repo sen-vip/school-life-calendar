@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v1.0 Stable
-// 안정판 정리
+// 우리학교 생활 달력 v1.1 Stable
+// 내 학교·학년반 저장 업데이트
 // ============================================================
 
 const API_CONFIG = {
@@ -157,7 +157,7 @@ function bindEvents() {
   });
 
   els.resetBtn.addEventListener("click", () => {
-    localStorage.removeItem(STORAGE_KEY);
+    clearSavedPreferences();
     state.selectedSchool = null;
     state.schedules = [];
     state.meals = [];
@@ -170,10 +170,17 @@ function bindEvents() {
     state.todaySchedules = [];
     state.todayMeal = null;
     state.timetable = [];
+    state.timetableStatus = "idle";
+    state.timetableMessage = "";
+    state.timetableNotice = "";
     state.schools = [];
     els.schoolResults.innerHTML = "";
     els.schoolKeyword.value = "";
+    els.gradeInput.value = "1";
+    els.classInput.value = "1";
+    els.semesterInput.value = getTodaySemester(state.selectedDate);
     renderAll();
+    showCopyToast("저장된 학교와 학년·반을 초기화했어요.");
     document.querySelector("#search")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
@@ -947,10 +954,23 @@ function saveSelectedSchool(school) {
 
 function loadSelectedSchool() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved) return null;
+    const school = normalizeSchool(saved);
+    if (!school.schoolName || !school.officeCode || !school.schoolCode) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return school;
   } catch (error) {
+    localStorage.removeItem(STORAGE_KEY);
     return null;
   }
+}
+
+function clearSavedPreferences() {
+  localStorage.removeItem(STORAGE_KEY);
+  Object.values(TIMETABLE_STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
 }
 
 function getTimetableCacheKey(dateKey = state.selectedDate) {
@@ -1033,9 +1053,9 @@ function getTodaySemester(dateKey = formatDateKey(new Date())) {
 }
 
 function saveTimetablePreferences() {
-  localStorage.setItem(TIMETABLE_STORAGE_KEYS.grade, els.gradeInput.value || "1");
-  localStorage.setItem(TIMETABLE_STORAGE_KEYS.className, els.classInput.value || "1");
-  localStorage.setItem(TIMETABLE_STORAGE_KEYS.semester, els.semesterInput.value || "1");
+  localStorage.setItem(TIMETABLE_STORAGE_KEYS.grade, String(els.gradeInput.value || "1"));
+  localStorage.setItem(TIMETABLE_STORAGE_KEYS.className, String(els.classInput.value || "1"));
+  localStorage.setItem(TIMETABLE_STORAGE_KEYS.semester, String(els.semesterInput.value || "1"));
 }
 
 function loadTimetablePreferences() {

@@ -186,6 +186,19 @@ button { cursor: pointer; }
 }
 
 
+
+/* v1.1 saved school/class helper */
+.save-helper {
+  margin: 10px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.timetable-save-helper {
+  margin-top: 8px;
+}
+
 /* v0.2 school selection flow */
 .result-summary {
   color: var(--muted);
