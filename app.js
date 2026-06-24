@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v1.2.7 Detail Grouping & Layout Fix
-// 상단 설정 겹침 수정·선택 날짜 상세 묶음 업데이트
+// 우리학교 생활 달력 v1.2.8 Today Priority Hierarchy Update
+// 오늘 한눈에 보기 우선순위·선택 날짜 참고영역 위계 개선
 // ============================================================
 
 const API_CONFIG = {
@@ -612,7 +612,7 @@ function renderTodaySummary() {
   if (!els.todaySummaryCard) return;
 
   const todayKey = formatDateKey(new Date());
-  els.todaySummaryDate.textContent = formatKoreanDate(todayKey);
+  els.todaySummaryDate.textContent = `오늘 ${formatKoreanDate(todayKey)}`;
 
   if (!state.selectedSchool) {
     els.todaySummaryTitle.textContent = "오늘 우리학교";
@@ -634,7 +634,7 @@ function renderTodaySummary() {
   } else if (todaySchedules.length) {
     els.todayScheduleSummary.innerHTML = `<ul>${todaySchedules.slice(0, 4).map((item) => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul>${todaySchedules.length > 4 ? `<p class="today-more">외 ${todaySchedules.length - 4}건</p>` : ""}`;
   } else {
-    els.todayScheduleSummary.innerHTML = `<p class="empty">오늘 등록된 학사일정이 없습니다.</p>`;
+    els.todayScheduleSummary.innerHTML = `<p class="empty">오늘 등록된 학사일정이 없어요.</p>`;
   }
 
   const todayMeal = state.todayMeal;
@@ -649,7 +649,7 @@ function renderTodaySummary() {
   } else if (todayMeal && todayMeal.dishes?.length) {
     els.todayMealSummary.innerHTML = `<ul>${todayMeal.dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>`;
   } else {
-    els.todayMealSummary.innerHTML = `<p class="empty">오늘 급식정보가 없습니다.</p>`;
+    els.todayMealSummary.innerHTML = `<p class="empty">오늘 급식정보가 없어요.</p>`;
   }
 
   const todayGrade = els.gradeInput.value || "1";
@@ -693,7 +693,7 @@ function renderScheduleDetail() {
   const items = state.schedules.filter((item) => item.date === state.selectedDate);
   const notice = state.scheduleMessage && state.scheduleStatus !== "success" ? `<p class="detail-notice">${escapeHtml(state.scheduleMessage)}</p>` : "";
   if (!items.length) {
-    els.scheduleDetail.innerHTML = `${notice}<p class="empty">등록된 학사일정이 없어요.</p><p class="detail-empty-note">다른 날짜를 눌러 학사일정이 있는 날을 확인해 보세요.</p>`;
+    els.scheduleDetail.innerHTML = `${notice}<p class="empty">이 날짜에 등록된 학사일정이 없어요.</p><p class="detail-empty-note">다른 날짜를 눌러 학사일정이 있는 날을 확인해 보세요.</p>`;
     return;
   }
   els.scheduleDetail.innerHTML = `${notice}<ul>${items.map((item) => `<li><b>${escapeHtml(item.title)}</b>${item.content ? ` <span class="empty">${escapeHtml(item.content)}</span>` : ""}</li>`).join("")}</ul>`;
