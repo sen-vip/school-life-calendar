@@ -1,5 +1,5 @@
 // ============================================================
-// 우리학교 생활 달력 v1.2.1 Today Focus
+// 우리학교 생활 달력 v1.2.2 Today Header Focus
 // 모바일 사용성 정리 업데이트
 // ============================================================
 
@@ -152,7 +152,17 @@ function setSelectedDateToToday() {
 function scrollToTodaySummary(smooth = true) {
   const target = els.todaySummaryCard || document.querySelector("#todaySummaryCard") || document.querySelector("#calendarArea");
   if (!target) return;
-  target.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+
+  // v1.2.2: 학교 선택/복원 직후 사용자가 가장 먼저 궁금해하는
+  // “○○학교 오늘” 제목과 날짜 배지가 화면 위쪽에 바로 보이도록 보정합니다.
+  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  const headerOffset = isMobile ? 72 : 88;
+  const targetTop = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+
+  window.scrollTo({
+    top: Math.max(targetTop, 0),
+    behavior: smooth ? "smooth" : "auto"
+  });
 }
 
 function renderOfficeOptions() {

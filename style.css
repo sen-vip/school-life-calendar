@@ -688,6 +688,7 @@ button { cursor: pointer; }
   }
 
   .today-summary-card {
+    scroll-margin-top: 72px;
     padding: 18px;
     border-color: #dce8fa;
   }
