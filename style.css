@@ -532,3 +532,350 @@ button { cursor: pointer; }
     width: 100%;
   }
 }
+
+/* v1.2 mobile usability refinements */
+.meal-allergy {
+  margin-top: 10px;
+  border: 1px solid #e7ecf4;
+  border-radius: 14px;
+  background: #fbfcff;
+  overflow: hidden;
+}
+.meal-allergy summary {
+  min-height: 38px;
+  padding: 9px 12px;
+  color: var(--navy-2);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.meal-allergy p {
+  margin: 0;
+  padding: 0 12px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  body { background: #f7f9fc; }
+
+  .app-header-inner {
+    width: calc(100% - 18px);
+    height: 56px;
+    gap: 8px;
+  }
+  .brand-home {
+    min-width: 0;
+    gap: 8px;
+    font-size: 15px;
+  }
+  #topSchoolName {
+    display: block;
+    max-width: 48vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .brand-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    font-size: 18px;
+  }
+  .top-actions { gap: 6px; }
+  .top-actions a {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .app-shell {
+    width: calc(100% - 16px);
+    padding: 8px 0 44px;
+  }
+  .hero {
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    border-radius: 20px;
+  }
+  .hero::after { display: none; }
+  .hero-top { align-items: flex-start; }
+  .brand-pill, .kicker { font-size: 12px; }
+  .hero-note { font-size: 12px; }
+  .hero h1 {
+    margin: 10px 0 4px;
+    font-size: 23px;
+    line-height: 1.2;
+  }
+  .hero p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .card,
+  .selected-card,
+  .notice {
+    border-radius: 20px;
+    margin-bottom: 12px;
+  }
+  .card { padding: 17px; }
+  .card-heading,
+  .today-summary-head,
+  .toolbar {
+    gap: 10px;
+  }
+  .card-heading {
+    align-items: flex-start;
+  }
+  .card-heading h2,
+  .toolbar h2,
+  .detail-title h2,
+  .today-summary-head h2 {
+    font-size: 19px;
+  }
+  .ghost-button {
+    min-height: 34px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .search-form { margin-top: 12px; gap: 8px; }
+  .search-form input,
+  .search-form select,
+  .timetable-controls input,
+  .timetable-controls select {
+    min-height: 44px;
+    padding: 11px 12px;
+    border-radius: 14px;
+  }
+  .search-form button,
+  #loadTimetableBtn {
+    min-height: 44px;
+    padding: 11px 14px;
+    border-radius: 14px;
+  }
+  .quick-row {
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .quick-row button {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+  .save-helper { font-size: 11px; }
+
+  .selected-card {
+    grid-template-columns: 42px 1fr;
+    gap: 12px;
+    padding: 16px;
+  }
+  .selected-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 15px;
+    font-size: 21px;
+  }
+  .selected-card h2 {
+    font-size: 18px;
+    line-height: 1.25;
+  }
+  .selected-card p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .today-summary-card {
+    padding: 18px;
+    border-color: #dce8fa;
+  }
+  .today-summary-head {
+    margin-bottom: 12px;
+  }
+  .today-summary-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .today-summary-date,
+  .copy-button {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+  }
+  .today-summary-grid {
+    gap: 9px;
+  }
+  .today-summary-item {
+    min-height: auto;
+    padding: 14px;
+    border-radius: 16px;
+  }
+  .today-summary-item strong {
+    margin-bottom: 7px;
+  }
+  .today-summary-body {
+    font-size: 13px;
+    line-height: 1.48;
+  }
+  .today-summary-body li + li { margin-top: 2px; }
+
+  .toolbar {
+    display: grid;
+    grid-template-columns: 42px 1fr 42px 56px;
+    align-items: center;
+  }
+  .toolbar > div { text-align: center; }
+  .toolbar button {
+    min-width: 0;
+    height: 38px;
+    border-radius: 13px;
+  }
+  #todayBtn {
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .view-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 12px 0;
+    padding: 5px;
+    border-radius: 16px;
+    scrollbar-width: none;
+  }
+  .view-tabs::-webkit-scrollbar { display: none; }
+  .view-tabs button {
+    flex: 0 0 auto;
+    padding: 9px 11px;
+    font-size: 12px;
+  }
+
+  .calendar {
+    overflow: hidden;
+    border-radius: 16px;
+  }
+  .week-row,
+  .calendar-grid {
+    min-width: 0;
+  }
+  .weekday {
+    padding: 9px 2px;
+    font-size: 11px;
+  }
+  .day-cell {
+    min-height: 58px;
+    padding: 7px 5px 6px;
+    align-items: center;
+  }
+  .day-number {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+  .day-markers {
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+    min-height: 8px;
+    margin-top: 5px;
+  }
+  .marker {
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    border-radius: 999px;
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
+  }
+  .marker.schedule,
+  .marker.meal,
+  .marker.timetable {
+    color: transparent;
+  }
+  .calendar-status {
+    margin-top: 8px;
+    padding: 9px 11px;
+    font-size: 12px;
+  }
+
+  .copy-strip {
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+  .copy-strip strong { font-size: 15px; }
+  .detail-grid { gap: 12px; }
+  .detail-card {
+    min-height: auto;
+  }
+  .detail-title span { font-size: 21px; }
+  .detail-body {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .detail-body ul,
+  .detail-body ol {
+    padding-left: 18px;
+  }
+
+  .timetable-controls {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+  }
+  .timetable-controls label {
+    font-size: 12px;
+  }
+  .timetable-ready {
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+  .timetable-ready p {
+    display: none;
+  }
+  .timetable-list {
+    gap: 7px;
+  }
+  .timetable-list li,
+  .today-timetable-list li {
+    padding: 9px 10px;
+    border: 1px solid #e4ebf7;
+    border-radius: 12px;
+    background: #fbfcff;
+  }
+  .today-timetable-list {
+    display: grid;
+    gap: 7px;
+  }
+  .meal-summary { gap: 6px; }
+  .meal-name,
+  .meal-calorie {
+    min-height: 26px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .meal-allergy summary {
+    min-height: 36px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .meal-allergy p {
+    padding: 0 10px 10px;
+    font-size: 12px;
+  }
+  .notice {
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 380px) {
+  #topSchoolName { max-width: 38vw; }
+  .top-actions a { padding: 0 8px; }
+  .toolbar { grid-template-columns: 36px 1fr 36px 48px; }
+  .day-cell { min-height: 54px; padding-inline: 3px; }
+  .timetable-controls { grid-template-columns: 1fr; }
+}

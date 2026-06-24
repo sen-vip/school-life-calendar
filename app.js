@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v1.1 Stable
-// 내 학교·학년반 저장 업데이트
+// 우리학교 생활 달력 v1.2 Mobile
+// 모바일 사용성 정리 업데이트
 // ============================================================
 
 const API_CONFIG = {
@@ -660,7 +660,7 @@ function renderMealDetail() {
       ${state.meal.calorie ? `<span class="meal-calorie">${escapeHtml(state.meal.calorie)}</span>` : ""}
     </div>
     ${dishes.length ? `<ul>${dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>` : `<p class="empty">표시할 메뉴가 없습니다.</p>`}
-    ${state.meal.allergy ? `<p class="meal-note">${escapeHtml(state.meal.allergy)}</p>` : ""}
+    ${state.meal.allergy ? `<details class="meal-allergy"><summary>알레르기 정보 보기</summary><p>${escapeHtml(state.meal.allergy)}</p></details>` : ""}
   `;
 }
 
