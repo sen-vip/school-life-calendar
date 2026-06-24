@@ -1,5 +1,5 @@
 // ============================================================
-// 우리학교 생활 달력 v1.2 Mobile
+// 우리학교 생활 달력 v1.2.1 Today Focus
 // 모바일 사용성 정리 업데이트
 // ============================================================
 
@@ -132,10 +132,27 @@ function init() {
   const saved = loadSelectedSchool();
   if (saved) {
     state.selectedSchool = saved;
-    loadMonthData().then(renderAll);
+    setSelectedDateToToday();
+    loadMonthData().then(() => {
+      renderAll();
+      requestAnimationFrame(() => scrollToTodaySummary(false));
+    });
   } else {
     renderAll();
   }
+}
+
+
+function setSelectedDateToToday() {
+  const today = new Date();
+  state.currentDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  state.selectedDate = formatDateKey(today);
+}
+
+function scrollToTodaySummary(smooth = true) {
+  const target = els.todaySummaryCard || document.querySelector("#todaySummaryCard") || document.querySelector("#calendarArea");
+  if (!target) return;
+  target.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
 }
 
 function renderOfficeOptions() {
@@ -197,12 +214,11 @@ function bindEvents() {
   });
 
   els.todayBtn.addEventListener("click", async () => {
-    const today = new Date();
-    state.currentDate = new Date(today.getFullYear(), today.getMonth(), 1);
-    state.selectedDate = formatDateKey(today);
+    setSelectedDateToToday();
     await loadMonthData();
     await loadDayData();
     renderAll();
+    scrollToTodaySummary(true);
   });
 
   els.calendar.addEventListener("click", async (event) => {
@@ -741,15 +757,10 @@ function renderSchoolResults(schools, notice = "") {
       const selected = state.schools[Number(button.dataset.schoolIndex)];
       state.selectedSchool = selected;
       saveSelectedSchool(selected);
-      const today = new Date();
-      if (state.currentDate.getFullYear() === today.getFullYear() && state.currentDate.getMonth() === today.getMonth()) {
-        state.selectedDate = formatDateKey(today);
-      } else {
-        state.selectedDate = formatDateKey(new Date(state.currentDate.getFullYear(), state.currentDate.getMonth(), 1));
-      }
+      setSelectedDateToToday();
       await loadMonthData();
       renderAll();
-      document.querySelector("#calendarArea")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToTodaySummary(true);
     });
   });
 }
