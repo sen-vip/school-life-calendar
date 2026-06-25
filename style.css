@@ -1556,3 +1556,69 @@ body:not(.has-selected-school) .selected-action-row {
     font-size: 15px;
   }
 }
+
+/* v1.2.8.1 mobile right-angle alignment fix
+   - Keep existing logic intact; only normalize mobile spacing and grid lines. */
+@media (max-width: 520px) {
+  .top-setting-grid {
+    gap: 14px;
+  }
+
+  .school-setting-panel .search-form {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .search-form .search-field,
+  .class-setting-panel .top-timetable-controls label {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .school-setting-panel .search-form input,
+  .school-setting-panel .search-form select,
+  .school-setting-panel .search-form button,
+  .class-setting-panel .top-timetable-controls input,
+  .class-setting-panel .top-timetable-controls select {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+  }
+
+  .class-setting-panel .top-timetable-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .class-setting-panel .top-timetable-controls label:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .today-summary-card,
+  .selected-detail-card {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .today-summary-head,
+  .today-summary-grid,
+  .selected-detail-head,
+  .detail-section-label,
+  .selected-detail-card .detail-grid {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .today-summary-card {
+    margin-bottom: 18px;
+  }
+
+  .today-summary-item,
+  .selected-detail-card .detail-card {
+    border-radius: 18px;
+  }
+
+  .selected-detail-card .detail-grid {
+    gap: 12px;
+  }
+}
