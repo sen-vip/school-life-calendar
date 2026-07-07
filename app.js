@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v1.2.8.1 Mobile Right-Angle Alignment Fix
-// 오늘 한눈에 보기 우선순위·선택 날짜 참고영역 위계 개선
+// 우리학교 생활 달력 v1.2.10 Loading Dots Update
+// 공유 링크 유지 + 검색/불러오기 대기 문구 점 애니메이션 추가
 // ============================================================
 
 const API_CONFIG = {
@@ -16,6 +16,10 @@ const TIMETABLE_STORAGE_KEYS = {
   semester: "schoolLifeTimetableSemester"
 };
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function renderLoadingText(label) {
+  return `<span class="loading-text">${escapeHtml(label)}</span><span class="loading-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>`;
+}
 
 const OFFICE_OPTIONS = [
   { code: "", name: "전체", shortName: "전체" },
@@ -105,8 +109,10 @@ const els = {
   todaySummaryTitle: document.querySelector("#todaySummaryTitle"),
   todaySummaryDate: document.querySelector("#todaySummaryDate"),
   copyTodayBtn: document.querySelector("#copyTodayBtn"),
+  shareSchoolBtn: document.querySelector("#shareSchoolBtn"),
   selectedCopyDate: document.querySelector("#selectedCopyDate"),
   copySelectedBtn: document.querySelector("#copySelectedBtn"),
+  shareSelectedBtn: document.querySelector("#shareSelectedBtn"),
   copyToast: document.querySelector("#copyToast"),
   todayScheduleSummary: document.querySelector("#todayScheduleSummary"),
   todayMealSummary: document.querySelector("#todayMealSummary"),
@@ -130,17 +136,28 @@ const els = {
 function init() {
   renderOfficeOptions();
   loadTimetablePreferences();
+  const sharedState = getSharedStateFromUrl();
+  applySharedTimetablePreferences(sharedState);
   bindEvents();
-  const saved = loadSelectedSchool();
-  if (saved) {
-    state.selectedSchool = saved;
-    setSelectedDateToToday();
+
+  const initialSchool = sharedState.school || loadSelectedSchool();
+  if (initialSchool) {
+    state.selectedSchool = initialSchool;
+    if (sharedState.school) saveSelectedSchool(initialSchool);
+    applyInitialCalendarState(sharedState);
     loadMonthData().then(async () => {
       await loadTimetable();
       renderAll();
-      requestAnimationFrame(() => scrollToTodaySummary(false));
+      requestAnimationFrame(() => {
+        if (sharedState.date) {
+          document.querySelector("#detailArea")?.scrollIntoView({ behavior: "auto", block: "start" });
+        } else {
+          scrollToTodaySummary(false);
+        }
+      });
     });
   } else {
+    applyInitialCalendarState(sharedState);
     renderAll();
   }
 }
@@ -188,6 +205,7 @@ function bindEvents() {
 
   els.resetBtn.addEventListener("click", () => {
     clearSavedPreferences();
+    clearShareQuery();
     state.selectedSchool = null;
     state.schedules = [];
     state.meals = [];
@@ -300,6 +318,18 @@ function bindEvents() {
       await copyText(buildSelectedDateCopyText(), "선택 날짜 내용을 복사했어요. 메신저에 바로 붙여넣을 수 있어요.");
     });
   }
+
+  if (els.shareSchoolBtn) {
+    els.shareSchoolBtn.addEventListener("click", async () => {
+      await shareCalendarLink("month");
+    });
+  }
+
+  if (els.shareSelectedBtn) {
+    els.shareSelectedBtn.addEventListener("click", async () => {
+      await shareCalendarLink("date");
+    });
+  }
 }
 
 async function handleSchoolSearch(fallbackKeyword = "") {
@@ -308,7 +338,7 @@ async function handleSchoolSearch(fallbackKeyword = "") {
     els.schoolResults.innerHTML = `<div class="empty result-empty">학교명을 입력하거나 아래 빠른 선택 버튼을 눌러주세요.</div>`;
     return;
   }
-  els.schoolResults.innerHTML = `<div class="loading">학교를 검색하고 있어요.</div>`;
+  els.schoolResults.innerHTML = `<div class="loading">${renderLoadingText("학교를 검색하고 있어요")}</div>`;
   try {
     const schools = await fetchSchools(keyword, els.officeCode.value);
     state.schools = schools;
@@ -630,7 +660,7 @@ function renderTodaySummary() {
 
   const todaySchedules = state.todaySchedules || [];
   if (state.scheduleStatus === "loading") {
-    els.todayScheduleSummary.innerHTML = `<p class="empty">학사일정을 불러오는 중입니다.</p>`;
+    els.todayScheduleSummary.innerHTML = `<p class="empty">${renderLoadingText("학사일정을 불러오는 중입니다")}</p>`;
   } else if (todaySchedules.length) {
     els.todayScheduleSummary.innerHTML = `<ul>${todaySchedules.slice(0, 4).map((item) => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul>${todaySchedules.length > 4 ? `<p class="today-more">외 ${todaySchedules.length - 4}건</p>` : ""}`;
   } else {
@@ -645,7 +675,7 @@ function renderTodaySummary() {
       : "🍱 급식";
   }
   if (state.mealStatus === "loading") {
-    els.todayMealSummary.innerHTML = `<p class="empty">급식정보를 불러오는 중입니다.</p>`;
+    els.todayMealSummary.innerHTML = `<p class="empty">${renderLoadingText("급식정보를 불러오는 중입니다")}</p>`;
   } else if (todayMeal && todayMeal.dishes?.length) {
     els.todayMealSummary.innerHTML = `<ul>${todayMeal.dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>`;
   } else {
@@ -686,7 +716,7 @@ function renderScheduleDetail() {
     return;
   }
   if (state.scheduleStatus === "loading") {
-    els.scheduleDetail.innerHTML = `<p class="empty">학사일정을 불러오는 중입니다.</p>`;
+    els.scheduleDetail.innerHTML = `<p class="empty">${renderLoadingText("학사일정을 불러오는 중입니다")}</p>`;
     return;
   }
 
@@ -705,7 +735,7 @@ function renderMealDetail() {
     return;
   }
   if (state.mealStatus === "loading") {
-    els.mealDetail.innerHTML = `<p class="empty">급식정보를 불러오는 중입니다.</p>`;
+    els.mealDetail.innerHTML = `<p class="empty">${renderLoadingText("급식정보를 불러오는 중입니다")}</p>`;
     return;
   }
 
@@ -745,7 +775,7 @@ function renderTimetableDetail() {
   if (!apiName) {
     body = `<p class="empty">현재 이 학교급의 시간표 조회는 아직 지원하지 않습니다.</p>`;
   } else if (state.timetableStatus === "loading") {
-    body = `<p class="empty">시간표를 불러오는 중입니다.</p>`;
+    body = `<p class="empty">${renderLoadingText("시간표를 불러오는 중입니다")}</p>`;
   } else if (state.timetableStatus === "success" && state.timetable.length) {
     body = `<ol class="timetable-list">${state.timetable.map((item) => `<li><b>${escapeHtml(item.period)}교시</b> ${escapeHtml(item.subject || "-")}</li>`).join("")}</ol>`;
   } else if (state.timetableMessage) {
@@ -823,6 +853,7 @@ function renderSchoolResults(schools, notice = "") {
   els.schoolResults.querySelectorAll("[data-school-index]").forEach((button) => {
     button.addEventListener("click", async () => {
       const selected = state.schools[Number(button.dataset.schoolIndex)];
+      clearShareQuery();
       saveTimetablePreferences();
       state.selectedSchool = selected;
       saveSelectedSchool(selected);
@@ -911,23 +942,110 @@ async function copyText(text, successMessage) {
   }
 
   try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
+    await writeToClipboard(text);
     showCopyToast(successMessage || "복사했어요.");
   } catch (error) {
     showCopyToast("복사에 실패했어요. 다시 시도해 주세요.", true);
   }
+}
+
+async function writeToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+}
+
+async function shareCalendarLink(mode = "month") {
+  if (!state.selectedSchool) {
+    showCopyToast("학교를 먼저 선택해 주세요.", true);
+    return;
+  }
+
+  const url = buildShareUrl(mode);
+  const shareData = {
+    title: "우리학교 생활달력",
+    text: buildShareText(mode),
+    url
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      return;
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+    }
+  }
+
+  try {
+    await writeToClipboard(url);
+    showCopyToast("공유 링크가 복사됐어요.");
+  } catch (error) {
+    showShareFallback(url);
+  }
+}
+
+function buildShareUrl(mode = "month") {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+
+  const params = url.searchParams;
+  params.set("schoolCode", state.selectedSchool.schoolCode || "");
+  params.set("officeCode", state.selectedSchool.officeCode || "");
+  params.set("schoolName", state.selectedSchool.schoolName || "");
+  if (state.selectedSchool.schoolType) params.set("schoolType", state.selectedSchool.schoolType);
+  if (state.selectedSchool.region) params.set("region", state.selectedSchool.region);
+  params.set("grade", els.gradeInput.value || "1");
+  params.set("classNm", els.classInput.value || "1");
+  params.set("semester", els.semesterInput.value || "1");
+
+  if (mode === "date" && state.selectedDate) {
+    params.set("date", state.selectedDate);
+  } else {
+    params.set("month", `${state.currentDate.getFullYear()}-${pad(state.currentDate.getMonth() + 1)}`);
+  }
+
+  return url.toString();
+}
+
+function buildShareText(mode = "month") {
+  if (!state.selectedSchool) return "우리학교 생활달력을 확인해 보세요.";
+  const grade = els.gradeInput.value || "1";
+  const className = els.classInput.value || "1";
+  const classText = `${grade}학년 ${className}반`;
+  if (mode === "date" && state.selectedDate) {
+    return `${state.selectedSchool.schoolName} ${classText} ${formatKoreanDate(state.selectedDate)} 생활달력을 확인해 보세요.`;
+  }
+  return `${state.selectedSchool.schoolName} ${classText} 생활달력을 확인해 보세요.`;
+}
+
+function showShareFallback(url) {
+  document.querySelector(".share-fallback-box")?.remove();
+  const box = document.createElement("div");
+  box.className = "share-fallback-box";
+  box.innerHTML = `
+    <p>링크를 직접 복사해 주세요.</p>
+    <input type="text" readonly value="${escapeHtml(url)}" aria-label="공유 링크" />
+    <button type="button">닫기</button>
+  `;
+  document.body.appendChild(box);
+  const input = box.querySelector("input");
+  input?.focus();
+  input?.select();
+  box.querySelector("button")?.addEventListener("click", () => box.remove());
+  showCopyToast("링크를 직접 복사해 주세요.", true);
 }
 
 function showCopyToast(message, isError = false) {
@@ -1025,6 +1143,81 @@ function normalizeSchool(school = {}) {
     schoolType: school.schoolType || school.SCHUL_KND_SC_NM || "학교",
     address: school.address || school.ORG_RDNMA || school.ORG_RDNDA || ""
   };
+}
+
+function getSharedStateFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const rawSchool = {
+    schoolName: params.get("schoolName") || "",
+    officeCode: params.get("officeCode") || "",
+    schoolCode: params.get("schoolCode") || "",
+    schoolType: params.get("schoolType") || "학교",
+    region: params.get("region") || ""
+  };
+  const school = rawSchool.schoolName && rawSchool.officeCode && rawSchool.schoolCode
+    ? normalizeSchool(rawSchool)
+    : null;
+
+  return {
+    school,
+    grade: normalizeNumberParam(params.get("grade"), 1, 6),
+    className: normalizeNumberParam(params.get("classNm") || params.get("className"), 1, 30),
+    semester: ["1", "2"].includes(params.get("semester")) ? params.get("semester") : "",
+    month: normalizeMonthParam(params.get("month")),
+    date: normalizeDateParam(params.get("date"))
+  };
+}
+
+function applySharedTimetablePreferences(sharedState = {}) {
+  if (sharedState.grade) els.gradeInput.value = sharedState.grade;
+  if (sharedState.className) els.classInput.value = sharedState.className;
+  if (sharedState.semester) els.semesterInput.value = sharedState.semester;
+  if (sharedState.grade || sharedState.className || sharedState.semester) saveTimetablePreferences();
+}
+
+function applyInitialCalendarState(sharedState = {}) {
+  if (sharedState.date) {
+    const date = new Date(`${sharedState.date}T00:00:00`);
+    state.currentDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    state.selectedDate = sharedState.date;
+    return;
+  }
+
+  if (sharedState.month) {
+    const [year, month] = sharedState.month.split("-").map(Number);
+    state.currentDate = new Date(year, month - 1, 1);
+    state.selectedDate = `${sharedState.month}-01`;
+    return;
+  }
+
+  setSelectedDateToToday();
+}
+
+function normalizeNumberParam(value, min, max) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < min || number > max) return "";
+  return String(number);
+}
+
+function normalizeMonthParam(value = "") {
+  if (!/^\d{4}-\d{2}$/.test(value)) return "";
+  const [year, month] = value.split("-").map(Number);
+  if (year < 2000 || year > 2100 || month < 1 || month > 12) return "";
+  return value;
+}
+
+function normalizeDateParam(value = "") {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  if (formatDateKey(date) !== value) return "";
+  return value;
+}
+
+function clearShareQuery() {
+  if (!window.history?.replaceState || !window.location.search) return;
+  const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
+  window.history.replaceState({}, document.title, cleanUrl);
 }
 
 function searchMockSchools(keyword, officeCode) {
