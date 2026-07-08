@@ -671,7 +671,8 @@ function renderSummary() {
     : "학교를 선택하면 일정 개수를 확인할 수 있어요.";
 
   const counts = monthSchedules.reduce((acc, schedule) => {
-    acc[schedule.type] = (acc[schedule.type] || 0) + 1;
+    const displayType = getScheduleType(schedule);
+    acc[displayType] = (acc[displayType] || 0) + 1;
     return acc;
   }, { exam: 0, vacation: 0, event: 0, saturday: 0, holiday: 0, substitute: 0, normal: 0 });
 
@@ -700,8 +701,9 @@ function renderCalendar() {
   const startDate = new Date(year, month, 1 - firstDay.getDay());
   const todayKey = toDateKey(new Date());
   const monthSchedules = getMonthSchedules().filter((schedule) => {
+    const displayType = getScheduleType(schedule);
     return isScheduleVisibleByGrade(schedule, state.selectedGrade) &&
-      (state.activeFilter === "all" || schedule.type === state.activeFilter);
+      (state.activeFilter === "all" || displayType === state.activeFilter);
   });
 
   const schedulesByDate = monthSchedules.reduce((acc, schedule) => {
@@ -741,7 +743,10 @@ function renderCalendar() {
         title="${escapeHtml(getDateTooltip(key, schedules))}"
       >
         <div class="day-number">${cellDate.getDate()}</div>
-        ${visibleSchedules.map((schedule) => `<span class="calendar-schedule ${schedule.type}" title="${escapeHtml(getScheduleTooltip(schedule))}">${escapeHtml(schedule.title)}</span>`).join("")}
+        ${visibleSchedules.map((schedule) => {
+          const displayType = getScheduleType(schedule);
+          return `<span class="calendar-schedule ${displayType}" title="${escapeHtml(getScheduleTooltip(schedule))}">${escapeHtml(schedule.title)}</span>`;
+        }).join("")}
         ${moreCount ? `<span class="more-count">+${moreCount}</span>` : ""}
       </div>
     `);
@@ -763,7 +768,7 @@ function renderSelectedDatePanel() {
   const daySchedules = getSelectedSchoolSchedules().filter((schedule) => {
     return schedule.date === state.selectedDateKey &&
       isScheduleVisibleByGrade(schedule, state.selectedGrade) &&
-      (state.activeFilter === "all" || schedule.type === state.activeFilter);
+      (state.activeFilter === "all" || getScheduleType(schedule) === state.activeFilter);
   });
   const label = `${date.getMonth() + 1}.${date.getDate()} ${weekdays[date.getDay()]}`;
 
@@ -827,13 +832,14 @@ function renderScheduleList() {
     const date = parseDateKey(schedule.date);
     const monthDay = `${date.getMonth() + 1}.${date.getDate()}`;
     const weekday = weekdays[date.getDay()];
+    const displayType = getScheduleType(schedule);
     return `
       <article class="schedule-item" title="${escapeHtml(getScheduleTooltip(schedule))}">
         <div class="date-pill"><span>${monthDay}</span><small>${weekday}</small></div>
         <div class="schedule-body">
           <h3>${escapeHtml(schedule.title)}</h3>
           ${schedule.content ? `<p>${escapeHtml(schedule.content)}</p>` : ""}
-          <span class="type-badge ${schedule.type}">${typeLabels[schedule.type] || typeLabels.normal}</span>
+          <span class="type-badge ${displayType}">${typeLabels[displayType] || typeLabels.normal}</span>
           <span class="grade-badge">${escapeHtml(getGradeLabel(schedule))}</span>
         </div>
       </article>
@@ -936,7 +942,7 @@ function handleCalendarDateClick(event) {
   const clickedSchedules = getSelectedSchoolSchedules().filter((schedule) => {
     return schedule.date === clickedDate &&
       isScheduleVisibleByGrade(schedule, state.selectedGrade) &&
-      (state.activeFilter === "all" || schedule.type === state.activeFilter);
+      (state.activeFilter === "all" || getScheduleType(schedule) === state.activeFilter);
   });
 
   if (!clickedSchedules.length) return;
@@ -1268,7 +1274,7 @@ function getFilteredSchedules() {
   }
 
   return baseSchedules.filter((schedule) => {
-    const matchedFilter = state.activeFilter === "all" || schedule.type === state.activeFilter;
+    const matchedFilter = state.activeFilter === "all" || getScheduleType(schedule) === state.activeFilter;
     const matchedGrade = isScheduleVisibleByGrade(schedule, state.selectedGrade);
     const matchedKeyword = !keyword || [schedule.title, schedule.content]
       .join(" ")
@@ -1280,7 +1286,11 @@ function getFilteredSchedules() {
 
 function getPrimaryScheduleType(schedules = []) {
   const priority = ["exam", "holiday", "substitute", "vacation", "event", "saturday", "normal"];
-  return priority.find((type) => schedules.some((schedule) => schedule.type === type)) || schedules[0]?.type || "normal";
+  return priority.find((type) => schedules.some((schedule) => getScheduleType(schedule) === type)) || getScheduleType(schedules[0]) || "normal";
+}
+
+function getScheduleType(schedule = {}) {
+  return normalizeScheduleType(schedule.type, schedule.title, schedule.content);
 }
 
 function normalizeScheduleType(rawType = "", title = "", content = "") {
