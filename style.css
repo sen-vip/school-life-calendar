@@ -124,6 +124,49 @@ button { cursor: pointer; }
 .toolbar { justify-content: center; }
 .toolbar button { border: 1px solid #dbe5f3; background: #fff; border-radius: 14px; min-width: 42px; height: 42px; font-size: 20px; font-weight: 900; color: var(--navy); }
 #todayBtn { font-size: 14px; padding: 0 14px; }
+.main-view-tabs {
+  position: sticky;
+  top: 72px;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 10px 28px rgba(25,42,70,.08);
+  backdrop-filter: blur(12px);
+}
+.main-view-tabs button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 850;
+  cursor: pointer;
+}
+.main-view-tabs button.active {
+  background: var(--navy-2);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(37,75,132,.18);
+}
+#todaySummaryCard,
+#calendarArea {
+  scroll-margin-top: 166px;
+}
+[hidden] { display: none !important; }
+body[data-active-view="schedule"] .meal-detail,
+body[data-active-view="schedule"] .timetable-detail,
+body[data-active-view="meal"] .schedule-detail,
+body[data-active-view="meal"] .timetable-detail { display: none !important; }
+body[data-active-view="schedule"] .detail-grid,
+body[data-active-view="meal"] .detail-grid { grid-template-columns: minmax(0, 1fr); }
+body[data-active-view="schedule"] .detail-card,
+body[data-active-view="meal"] .detail-card { min-height: 0; }
+
 .view-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; padding: 6px; background: var(--soft); border-radius: 18px; }
 .view-tabs button { border: 0; background: transparent; border-radius: 14px; padding: 10px 14px; font-weight: 800; color: var(--muted); }
 .view-tabs button.active { background: #fff; color: var(--navy); box-shadow: 0 8px 22px rgba(25,42,70,.08); }
@@ -1762,5 +1805,21 @@ body:not(.has-selected-school) .selected-action-row {
   .loading-dots span {
     animation: none;
     opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-view-tabs {
+    top: 62px;
+    border-radius: 16px;
+  }
+  .main-view-tabs button {
+    min-height: 42px;
+    padding: 8px 6px;
+    font-size: 14px;
+  }
+  #todaySummaryCard,
+  #calendarArea {
+    scroll-margin-top: 142px;
   }
 }

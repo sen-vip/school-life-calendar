@@ -1,6 +1,6 @@
 // ============================================================
-// 우리학교 생활 달력 v1.2.10 Loading Dots Update
-// 공유 링크 유지 + 검색/불러오기 대기 문구 점 애니메이션 추가
+// 오늘학교 v1.3.0 View Tabs Update
+// 한눈에 기본 화면 유지 + 학사일정·급식 집중 보기 추가
 // ============================================================
 
 const API_CONFIG = {
@@ -129,7 +129,8 @@ const els = {
   classInput: document.querySelector("#classInput"),
   semesterInput: document.querySelector("#semesterInput"),
   reloadTimetableBtn: document.querySelector("#reloadTimetableBtn"),
-  tabs: document.querySelectorAll("[data-tab]"),
+  viewTabs: document.querySelectorAll("[data-view]"),
+  viewSections: document.querySelectorAll("[data-view-section]"),
   panels: document.querySelectorAll("[data-panel]")
 };
 
@@ -169,20 +170,25 @@ function setSelectedDateToToday() {
   state.selectedDate = formatDateKey(today);
 }
 
-function scrollToTodaySummary(smooth = true) {
-  const target = els.todaySummaryCard || document.querySelector("#todaySummaryCard") || document.querySelector("#calendarArea");
+function scrollToViewSection(target, smooth = true) {
   if (!target) return;
 
-  // v1.2.5: 학교 선택/복원 직후 사용자가 가장 먼저 궁금해하는
-  // “○○학교 오늘” 제목과 날짜 배지가 화면 위쪽에 바로 보이도록 보정합니다.
-  const isMobile = window.matchMedia("(max-width: 768px)").matches;
-  const headerOffset = isMobile ? 72 : 88;
-  const targetTop = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+  // 고정 헤더와 보기 탭이 콘텐츠 제목을 덮지 않도록 실제 높이를 합산합니다.
+  const headerHeight = document.querySelector(".app-header")?.offsetHeight || 74;
+  const tabsHeight = document.querySelector(".main-view-tabs")?.offsetHeight || 56;
+  const breathingRoom = 18;
+  const targetTop = target.getBoundingClientRect().top + window.scrollY
+    - headerHeight - tabsHeight - breathingRoom;
 
   window.scrollTo({
     top: Math.max(targetTop, 0),
     behavior: smooth ? "smooth" : "auto"
   });
+}
+
+function scrollToTodaySummary(smooth = true) {
+  const target = els.todaySummaryCard || document.querySelector("#todaySummaryCard") || document.querySelector("#calendarArea");
+  scrollToViewSection(target, smooth);
 }
 
 function renderOfficeOptions() {
@@ -263,11 +269,15 @@ function bindEvents() {
     document.querySelector("#detailArea")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  els.tabs.forEach((button) => {
+  els.viewTabs.forEach((button) => {
     button.addEventListener("click", () => {
-      state.activeTab = button.dataset.tab;
-      renderPanels();
-      renderTabs();
+      state.activeTab = button.dataset.view;
+      renderView();
+
+      const target = state.activeTab === "all"
+        ? els.todaySummaryCard
+        : document.querySelector("#calendarArea");
+      requestAnimationFrame(() => scrollToViewSection(target, true));
     });
   });
 
@@ -553,8 +563,7 @@ function renderAll() {
   renderCalendar();
   renderTodaySummary();
   renderDetails();
-  renderTabs();
-  renderPanels();
+  renderView();
 }
 
 function renderSelectedSchool() {
@@ -816,14 +825,24 @@ function renderTimetableDetail() {
     ${body}
   `;
 }
-function renderTabs() {
-  els.tabs.forEach((button) => button.classList.toggle("active", button.dataset.tab === state.activeTab));
-}
+function renderView() {
+  els.viewTabs.forEach((button) => {
+    const isActive = button.dataset.view === state.activeTab;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
 
-function renderPanels() {
+  els.viewSections.forEach((section) => {
+    const type = section.dataset.viewSection;
+    const shouldShow = state.activeTab === "all" || type !== "summary";
+    section.hidden = !shouldShow;
+  });
+
   els.panels.forEach((panel) => {
     panel.style.display = state.activeTab === "all" || panel.dataset.panel === state.activeTab ? "block" : "none";
   });
+
+  document.body.dataset.activeView = state.activeTab;
 }
 
 function renderSchoolResults(schools, notice = "") {
