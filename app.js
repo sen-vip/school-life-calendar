@@ -562,7 +562,7 @@ function renderSelectedSchool() {
   document.body.classList.toggle("has-selected-school", hasSchool);
 
   if (!hasSchool) {
-    els.topSchoolName.textContent = "우리학교 생활 달력";
+    els.topSchoolName.textContent = "오늘학교";
     els.selectedSchoolName.textContent = "학교를 선택하면 생활 달력이 열려요.";
     els.selectedSchoolMeta.textContent = "학사일정은 달력에 표시되고, 급식·시간표는 날짜를 누르면 확인할 수 있어요.";
     if (els.reloadTimetableBtn) {
@@ -974,7 +974,7 @@ async function shareCalendarLink(mode = "month") {
 
   const url = buildShareUrl(mode);
   const shareData = {
-    title: "우리학교 생활달력",
+    title: "오늘학교",
     text: buildShareText(mode),
     url
   };
@@ -1021,7 +1021,7 @@ function buildShareUrl(mode = "month") {
 }
 
 function buildShareText(mode = "month") {
-  if (!state.selectedSchool) return "우리학교 생활달력을 확인해 보세요.";
+  if (!state.selectedSchool) return "오늘학교를 확인해 보세요.";
   const grade = els.gradeInput.value || "1";
   const className = els.classInput.value || "1";
   const classText = `${grade}학년 ${className}반`;
