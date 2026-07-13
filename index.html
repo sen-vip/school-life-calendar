@@ -101,9 +101,9 @@
 
       <nav class="main-view-tabs" role="tablist" aria-label="오늘학교 보기 전환">
         <button type="button" class="active" data-view="all" role="tab" aria-selected="true">오늘</button>
-        <button type="button" data-view="timetable" role="tab" aria-selected="false">시간표</button>
-        <button type="button" data-view="meal" role="tab" aria-selected="false">급식</button>
         <button type="button" data-view="schedule" role="tab" aria-selected="false">일정</button>
+        <button type="button" data-view="meal" role="tab" aria-selected="false">급식</button>
+        <button type="button" data-view="timetable" role="tab" aria-selected="false">시간표</button>
       </nav>
 
       <section class="card today-summary-card" id="todaySummaryCard" data-view-section="summary" aria-live="polite">
@@ -119,15 +119,15 @@
         </div>
         <div class="today-summary-grid">
           <article class="today-summary-item">
-            <strong>학사일정</strong>
+            <strong class="summary-title summary-title-schedule"><span class="title-emoji" aria-hidden="true">📅</span><span>학사일정</span></strong>
             <div id="todayScheduleSummary" class="today-summary-body">학교를 선택해 주세요.</div>
           </article>
           <article class="today-summary-item">
-            <strong id="todayMealTitle">급식</strong>
+            <strong id="todayMealTitle" class="summary-title summary-title-meal"><span class="title-emoji" aria-hidden="true">🍱</span><span>급식</span></strong>
             <div id="todayMealSummary" class="today-summary-body">학교를 선택해 주세요.</div>
           </article>
           <article class="today-summary-item">
-            <strong id="todayTimetableTitle">시간표</strong>
+            <strong id="todayTimetableTitle" class="summary-title summary-title-timetable"><span class="title-emoji" aria-hidden="true">🕘</span><span>시간표</span></strong>
             <div id="todayTimetableSummary" class="today-summary-body">학년·반·학기를 입력하고 시간표를 불러오면 표시됩니다.</div>
           </article>
         </div>
@@ -168,21 +168,21 @@
         <div class="detail-grid">
           <article class="detail-card schedule-detail" data-panel="schedule">
             <div class="detail-title schedule-title">
-              <h2>학사일정</h2>
+              <h2><span class="title-emoji" aria-hidden="true">📅</span><span>학사일정</span></h2>
             </div>
             <div id="scheduleDetail" class="detail-body">학교와 날짜를 선택해 주세요.</div>
           </article>
 
           <article class="detail-card meal-detail" data-panel="meal">
             <div class="detail-title meal-title">
-              <h2>급식</h2>
+              <h2><span class="title-emoji" aria-hidden="true">🍱</span><span>급식</span></h2>
             </div>
             <div id="mealDetail" class="detail-body">학교와 날짜를 선택해 주세요.</div>
           </article>
 
           <article class="detail-card timetable-detail" data-panel="timetable">
             <div class="detail-title timetable-title">
-              <h2>시간표</h2>
+              <h2><span class="title-emoji" aria-hidden="true">🕘</span><span>시간표</span></h2>
             </div>
             <div id="timetableDetail" class="detail-body">학교를 선택하면 입력한 학년·반 기준으로 시간표가 자동 적용돼요.</div>
           </article>

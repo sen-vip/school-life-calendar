@@ -693,6 +693,28 @@ body[data-active-view="timetable"] .detail-grid {
   letter-spacing: -0.02em;
 }
 
+.summary-title,
+.detail-title h2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.title-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.summary-title > span:last-of-type,
+.detail-title h2 > span:last-of-type {
+  display: inline-flex;
+  align-items: center;
+}
+
 .today-summary-item strong::before,
 .detail-title h2::before {
   content: "";
@@ -1672,6 +1694,10 @@ body[data-active-view="timetable"] .detail-grid {
   .today-summary-item strong {
     margin-bottom: 10px;
     font-size: 15px;
+  }
+
+  .title-emoji {
+    font-size: 16px;
   }
 
   .today-summary-body {
