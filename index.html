@@ -11,7 +11,12 @@
   <header class="app-header">
     <div class="app-header-inner">
       <a class="brand-home" href="#home" aria-label="처음으로">
-        <span class="brand-icon">🏫</span>
+        <span class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false">
+            <path d="M4 20V8.5L12 4l8 4.5V20" />
+            <path d="M8 20v-5h8v5M8 10h.01M12 10h.01M16 10h.01" />
+          </svg>
+        </span>
         <span id="topSchoolName">오늘학교</span>
       </a>
       <nav class="top-actions" aria-label="상단 메뉴">
@@ -23,12 +28,9 @@
 
   <div class="app-shell">
     <header class="hero" id="home">
-      <div class="hero-top">
-        <span class="brand-pill">v1.3.1 View Header Fix</span>
-        <span class="hero-note">한눈에 · 학사일정 · 급식 보기 전환</span>
-      </div>
-      <h1>학사일정 · 급식 · 시간표를 한눈에</h1>
-      <p>학교를 검색하면 학사일정, 급식, 시간표를 한 번에 확인할 수 있어요. 한 번 선택한 학교와 학년·반은 저장되고, 모바일에서도 오늘 정보를 빠르게 확인할 수 있어요. 공유하기로 현재 학교·학년·반·날짜를 그대로 보낼 수 있고, 검색 중에는 대기 문구가 움직여요.</p>
+      <span class="hero-eyebrow">오늘의 학교생활</span>
+      <h1>오늘 필요한 학교 정보만</h1>
+      <p>학사일정, 급식, 시간표를 한곳에서 빠르게 확인하세요.</p>
     </header>
 
     <main>
@@ -85,7 +87,7 @@
       </section>
 
       <section class="selected-card" id="selectedCard">
-        <div class="selected-icon">🏫</div>
+        <div class="selected-icon" aria-hidden="true"></div>
         <div class="selected-content">
           <span class="kicker">현재 선택한 학교</span>
           <h2 id="selectedSchoolName">학교를 선택하면 생활 달력이 열려요.</h2>
@@ -116,15 +118,15 @@
         </div>
         <div class="today-summary-grid">
           <article class="today-summary-item">
-            <strong>📅 학사일정</strong>
+            <strong>학사일정</strong>
             <div id="todayScheduleSummary" class="today-summary-body">학교를 선택해 주세요.</div>
           </article>
           <article class="today-summary-item">
-            <strong id="todayMealTitle">🍱 급식</strong>
+            <strong id="todayMealTitle">급식</strong>
             <div id="todayMealSummary" class="today-summary-body">학교를 선택해 주세요.</div>
           </article>
           <article class="today-summary-item">
-            <strong id="todayTimetableTitle">🕘 시간표</strong>
+            <strong id="todayTimetableTitle">시간표</strong>
             <div id="todayTimetableSummary" class="today-summary-body">학년·반·학기를 입력하고 시간표를 불러오면 표시됩니다.</div>
           </article>
         </div>
@@ -164,24 +166,21 @@
 
         <div class="detail-grid">
           <article class="detail-card schedule-detail" data-panel="schedule">
-            <div class="detail-title">
-              <span>📅</span>
+            <div class="detail-title schedule-title">
               <h2>학사일정</h2>
             </div>
             <div id="scheduleDetail" class="detail-body">학교와 날짜를 선택해 주세요.</div>
           </article>
 
           <article class="detail-card meal-detail" data-panel="meal">
-            <div class="detail-title">
-              <span>🍱</span>
+            <div class="detail-title meal-title">
               <h2>급식</h2>
             </div>
             <div id="mealDetail" class="detail-body">학교와 날짜를 선택해 주세요.</div>
           </article>
 
           <article class="detail-card timetable-detail" data-panel="timetable">
-            <div class="detail-title">
-              <span>🕘</span>
+            <div class="detail-title timetable-title">
               <h2>시간표</h2>
             </div>
             <div id="timetableDetail" class="detail-body">학교를 선택하면 입력한 학년·반 기준으로 시간표가 자동 적용돼요.</div>
@@ -189,10 +188,6 @@
         </div>
       </section>
 
-      <section class="notice">
-        <strong>v1.3.1 View Header Fix</strong>
-        <p>한눈에 보기를 기본으로 유지하고, 학사일정과 급식을 따로 볼 수 있는 화면 전환을 추가했습니다.</p>
-      </section>
 
       <footer class="app-footer">
         <span>제작</span>

@@ -656,9 +656,9 @@ function renderTodaySummary() {
   if (!state.selectedSchool) {
     els.todaySummaryTitle.textContent = "오늘 우리학교";
     const todayMealTitle = document.querySelector("#todayMealTitle");
-    if (todayMealTitle) todayMealTitle.innerHTML = "🍱 급식";
+    if (todayMealTitle) todayMealTitle.innerHTML = "급식";
     const todayTimetableTitle = document.querySelector("#todayTimetableTitle");
-    if (todayTimetableTitle) todayTimetableTitle.innerHTML = "🕘 시간표";
+    if (todayTimetableTitle) todayTimetableTitle.innerHTML = "시간표";
     els.todayScheduleSummary.innerHTML = `<p class="empty">학교를 선택하면 오늘 학사일정이 표시됩니다.</p>`;
     els.todayMealSummary.innerHTML = `<p class="empty">학교를 선택하면 오늘 급식정보가 표시됩니다.</p>`;
     els.todayTimetableSummary.innerHTML = `<p class="empty">학년·반을 입력한 뒤 학교를 선택하면 오늘 시간표가 자동 적용됩니다.</p>`;
@@ -680,8 +680,8 @@ function renderTodaySummary() {
   const todayMealTitle = document.querySelector("#todayMealTitle");
   if (todayMealTitle) {
     todayMealTitle.innerHTML = todayMeal?.calorie
-      ? `🍱 급식 <span class="title-badge meal-kcal">${escapeHtml(todayMeal.calorie)}</span>`
-      : "🍱 급식";
+      ? `급식 <span class="title-badge meal-kcal">${escapeHtml(todayMeal.calorie)}</span>`
+      : "급식";
   }
   if (state.mealStatus === "loading") {
     els.todayMealSummary.innerHTML = `<p class="empty">${renderLoadingText("급식정보를 불러오는 중입니다")}</p>`;
@@ -696,7 +696,7 @@ function renderTodaySummary() {
   const todaySemester = els.semesterInput.value || getTodaySemester(todayKey);
   const todayTimetableTitle = document.querySelector("#todayTimetableTitle");
   if (todayTimetableTitle) {
-    todayTimetableTitle.innerHTML = `🕘 시간표 <span class="title-badge class-badge">${escapeHtml(todayGrade)}-${escapeHtml(todayClassName)}</span>`;
+    todayTimetableTitle.innerHTML = `시간표 <span class="title-badge class-badge">${escapeHtml(todayGrade)}-${escapeHtml(todayClassName)}</span>`;
   }
 
   const todayTimetable = getTimetableCacheWithOptions(todayKey, todayGrade, todayClassName, todaySemester);
@@ -889,8 +889,8 @@ function renderDayMarkers(scheduleItems, meal, dateKey) {
   const markers = [];
   const scheduleMarker = renderScheduleMarkers(scheduleItems);
   if (scheduleMarker) markers.push(scheduleMarker);
-  if (meal) markers.push(`<span class="marker meal">🍱 급식</span>`);
-  if (hasTimetableCache(dateKey)) markers.push(`<span class="marker timetable">🕘 시간표</span>`);
+  if (meal) markers.push(`<span class="marker meal">급식</span>`);
+  if (hasTimetableCache(dateKey)) markers.push(`<span class="marker timetable">시간표</span>`);
   return markers.join("");
 }
 
@@ -904,11 +904,11 @@ function renderScheduleMarkers(items) {
 
 function getScheduleMarkerLabel(items) {
   const titles = items.map((item) => item.title).join(" ");
-  if (/방학|개학|휴업|재량휴업|휴교/.test(titles)) return "📅 방학/휴업";
-  if (/시험|평가|고사|모의고사/.test(titles)) return "📅 시험";
-  if (/체험|행사|축제|운동회|공개수업|자치회/.test(titles)) return "📅 행사";
-  if (items.length > 1) return `📅 일정 ${items.length}`;
-  return `📅 ${items[0].title}`;
+  if (/방학|개학|휴업|재량휴업|휴교/.test(titles)) return "방학/휴업";
+  if (/시험|평가|고사|모의고사/.test(titles)) return "시험";
+  if (/체험|행사|축제|운동회|공개수업|자치회/.test(titles)) return "행사";
+  if (items.length > 1) return `일정 ${items.length}`;
+  return `${items[0].title}`;
 }
 
 function queueTimetableAutoSync(delay = 450) {
@@ -1094,7 +1094,7 @@ function buildTodayCopyText() {
     schedules: todaySchedules,
     meal: todayMeal,
     timetable: todayTimetable,
-    timetableTitle: `🕘 시간표 ${grade}학년 ${className}반`,
+    timetableTitle: `시간표 ${grade}학년 ${className}반`,
     noTimetableText: "- 아직 불러온 시간표가 없습니다."
   });
 }
@@ -1111,7 +1111,7 @@ function buildSelectedDateCopyText() {
     schedules: selectedSchedules,
     meal: selectedMeal,
     timetable: selectedTimetable,
-    timetableTitle: "🕘 시간표",
+    timetableTitle: "시간표",
     noTimetableText: "- 시간표를 불러온 기록이 없습니다."
   });
 }
@@ -1119,7 +1119,7 @@ function buildSelectedDateCopyText() {
 function buildDayCopyText({ title, dateKey, schedules, meal, timetable, timetableTitle, noTimetableText }) {
   const lines = [title, "", formatKoreanDate(dateKey), ""];
 
-  lines.push("📅 학사일정");
+  lines.push("학사일정");
   if (schedules?.length) {
     schedules.forEach((item) => {
       lines.push(`- ${plainText(item.title)}${item.content ? `: ${plainText(item.content)}` : ""}`);
@@ -1128,7 +1128,7 @@ function buildDayCopyText({ title, dateKey, schedules, meal, timetable, timetabl
     lines.push("- 등록된 학사일정이 없습니다.");
   }
 
-  lines.push("", "🍱 급식");
+  lines.push("", "급식");
   if (meal?.dishes?.length) {
     meal.dishes.forEach((dish) => lines.push(`- ${plainText(dish)}`));
     if (meal.calorie) lines.push(`칼로리: ${plainText(meal.calorie)}`);
@@ -1136,7 +1136,7 @@ function buildDayCopyText({ title, dateKey, schedules, meal, timetable, timetabl
     lines.push("- 급식정보가 없습니다.");
   }
 
-  lines.push("", timetableTitle || "🕘 시간표");
+  lines.push("", timetableTitle || "시간표");
   if (timetable?.length) {
     timetable.forEach((item) => lines.push(`${plainText(item.period)}교시 ${plainText(item.subject || "-")}`));
   } else {
