@@ -20,6 +20,9 @@
   --timetable-soft: #edf8f3;
   --danger: #b42318;
   --danger-soft: #fff1f0;
+  --holiday: #c2414b;
+  --holiday-soft: #fff1f3;
+  --holiday-line: #ffd8dd;
   --radius-lg: 16px;
   --radius-md: 12px;
   --radius-sm: 10px;
@@ -554,9 +557,9 @@ body:not(.has-selected-school) .selected-action-row {
   top: 72px;
   z-index: 20;
   width: fit-content;
-  min-width: 330px;
+  min-width: 420px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(96px, 1fr));
+  grid-template-columns: repeat(4, minmax(92px, 1fr));
   gap: 3px;
   margin: 0 0 16px;
   padding: 4px;
@@ -596,12 +599,15 @@ body:not(.has-selected-school) .selected-action-row {
 body[data-active-view="schedule"] .meal-detail,
 body[data-active-view="schedule"] .timetable-detail,
 body[data-active-view="meal"] .schedule-detail,
-body[data-active-view="meal"] .timetable-detail {
+body[data-active-view="meal"] .timetable-detail,
+body[data-active-view="timetable"] .schedule-detail,
+body[data-active-view="timetable"] .meal-detail {
   display: none !important;
 }
 
 body[data-active-view="schedule"] .detail-grid,
-body[data-active-view="meal"] .detail-grid {
+body[data-active-view="meal"] .detail-grid,
+body[data-active-view="timetable"] .detail-grid {
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -908,6 +914,23 @@ body[data-active-view="meal"] .detail-grid {
   color: #b4bac4;
 }
 
+.day-cell.sunday:not(.muted) .day-number,
+.day-cell.holiday:not(.muted) .day-number {
+  color: var(--holiday);
+}
+
+.day-cell.saturday:not(.muted) .day-number {
+  color: #667085;
+}
+
+.day-cell.holiday:not(.muted) {
+  background: #fffdfd;
+}
+
+.day-cell.holiday:not(.muted):hover {
+  background: #fff8f9;
+}
+
 .day-cell.today .day-number {
   background: var(--ink-strong);
   color: #fff;
@@ -936,6 +959,12 @@ body[data-active-view="meal"] .detail-grid {
 .marker.schedule {
   background: var(--schedule-soft);
   color: #5e51bc;
+}
+
+.marker.holiday {
+  border: 1px solid var(--holiday-line);
+  background: var(--holiday-soft);
+  color: var(--holiday);
 }
 
 .marker.meal {
@@ -1363,7 +1392,8 @@ body[data-active-view="meal"] .detail-grid {
   }
 
   body[data-active-view="schedule"] .detail-grid,
-  body[data-active-view="meal"] .detail-grid {
+  body[data-active-view="meal"] .detail-grid,
+  body[data-active-view="timetable"] .detail-grid {
     padding-top: 8px;
   }
 }
@@ -1407,7 +1437,7 @@ body[data-active-view="meal"] .detail-grid {
     top: 70px;
     width: 100%;
     min-width: 0;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .today-summary-card {
@@ -1701,9 +1731,14 @@ body[data-active-view="meal"] .detail-grid {
     width: 6px;
     height: 6px;
     padding: 0;
+    border: 0;
     border-radius: 50%;
     color: transparent !important;
     font-size: 0;
+  }
+
+  .marker.holiday {
+    background: var(--holiday);
   }
 
   .day-cell.selected::after {

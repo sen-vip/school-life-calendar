@@ -1,6 +1,6 @@
 // ============================================================
-// 오늘학교 v1.3.0 View Tabs Update
-// 한눈에 기본 화면 유지 + 학사일정·급식 집중 보기 추가
+// 오늘학교 v1.4.1 Student Navigation Update
+// 오늘·시간표·급식·일정 바로가기 + 공휴일 시각 구분
 // ============================================================
 
 const API_CONFIG = {
@@ -16,6 +16,8 @@ const TIMETABLE_STORAGE_KEYS = {
   semester: "schoolLifeTimetableSemester"
 };
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+const PUBLIC_HOLIDAY_NAME_PATTERN = /^(?:신정|설날(?:\s*연휴)?|삼일절|3[·.]1절|어린이날|부처님오신날|석가탄신일|현충일|제헌절|광복절|추석(?:\s*연휴)?|개천절|한글날|성탄절|크리스마스|노동절|근로자의\s*날)(?:\s*\([^)]*\))?$/;
+const PUBLIC_HOLIDAY_TEXT_PATTERN = /(?:대체공휴일|임시공휴일|공휴일|관공서의\s*공휴일)/;
 
 function renderLoadingText(label) {
   return `<span class="loading-text">${escapeHtml(label)}</span><span class="loading-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>`;
@@ -276,7 +278,7 @@ function bindEvents() {
 
       const target = state.activeTab === "all"
         ? els.todaySummaryCard
-        : document.querySelector("#calendarArea");
+        : document.querySelector("#detailArea");
       requestAnimationFrame(() => scrollToViewSection(target, true));
     });
   });
@@ -616,9 +618,19 @@ function renderCalendar() {
     const isCurrentMonth = date.getMonth() === month;
     const daySchedules = state.schedules.filter((item) => item.date === key);
     const dayMeal = state.mealsByDate[key];
-    const classes = ["day-cell", !isCurrentMonth ? "muted" : "", key === todayKey ? "today" : "", key === selectedKey ? "selected" : ""].filter(Boolean).join(" ");
+    const holidaySchedule = getPublicHolidaySchedule(daySchedules);
+    const classes = [
+      "day-cell",
+      !isCurrentMonth ? "muted" : "",
+      date.getDay() === 0 ? "sunday" : "",
+      date.getDay() === 6 ? "saturday" : "",
+      isCurrentMonth && holidaySchedule ? "holiday" : "",
+      key === todayKey ? "today" : "",
+      key === selectedKey ? "selected" : ""
+    ].filter(Boolean).join(" ");
+    const holidayLabel = holidaySchedule ? `, 공휴일 ${holidaySchedule.title}` : "";
 
-    html += `<button type="button" class="${classes}" data-date="${key}" aria-label="${key}">
+    html += `<button type="button" class="${classes}" data-date="${key}" aria-label="${key}${escapeHtml(holidayLabel)}">
       <span class="day-number">${date.getDate()}</span>
       <span class="day-markers">${isCurrentMonth ? renderDayMarkers(daySchedules, dayMeal, key) : ""}</span>
     </button>`;
@@ -897,9 +909,23 @@ function renderDayMarkers(scheduleItems, meal, dateKey) {
 function renderScheduleMarkers(items) {
   if (!state.selectedSchool || !items.length) return "";
 
-  const mainLabel = getScheduleMarkerLabel(items);
+  const holidaySchedule = getPublicHolidaySchedule(items);
+  const mainLabel = holidaySchedule ? holidaySchedule.title : getScheduleMarkerLabel(items);
   const extraCount = items.length > 1 ? ` +${items.length - 1}` : "";
-  return `<span class="marker schedule">${mainLabel}${extraCount}</span>`;
+  const markerClass = holidaySchedule ? "holiday" : "schedule";
+  return `<span class="marker ${markerClass}">${escapeHtml(mainLabel)}${extraCount}</span>`;
+}
+
+function getPublicHolidaySchedule(items = []) {
+  return items.find((item) => isPublicHolidaySchedule(item)) || null;
+}
+
+function isPublicHolidaySchedule(item = {}) {
+  const title = String(item.title || "").replace(/\s+/g, " ").trim();
+  const content = String(item.content || "").replace(/\s+/g, " ").trim();
+  if (!title && !content) return false;
+  if (PUBLIC_HOLIDAY_TEXT_PATTERN.test(`${title} ${content}`)) return true;
+  return PUBLIC_HOLIDAY_NAME_PATTERN.test(title);
 }
 
 function getScheduleMarkerLabel(items) {
