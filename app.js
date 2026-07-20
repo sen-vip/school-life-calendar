@@ -1,6 +1,6 @@
 // ============================================================
-// 오늘학교 v1.4.1 Student Navigation Update
-// 오늘·시간표·급식·일정 바로가기 + 공휴일 시각 구분
+// 오늘학교 v1.4.2 Hero & Copy Format Update
+// 히어로 문구 정리 + 복사 텍스트 영역별 이모지 적용
 // ============================================================
 
 const API_CONFIG = {
@@ -1121,12 +1121,10 @@ function buildTodayCopyText() {
   const todayTimetable = getTimetableCacheWithOptions(todayKey, grade, className, semester);
 
   return buildDayCopyText({
-    title: `[${state.selectedSchool.schoolName} 오늘]`,
     dateKey: todayKey,
     schedules: todaySchedules,
     meal: todayMeal,
     timetable: todayTimetable,
-    timetableTitle: `시간표 ${grade}학년 ${className}반`,
     noTimetableText: "- 아직 불러온 시간표가 없습니다."
   });
 }
@@ -1138,20 +1136,18 @@ function buildSelectedDateCopyText() {
   const selectedTimetable = getTimetableCache(state.selectedDate);
 
   return buildDayCopyText({
-    title: `[${state.selectedSchool.schoolName}]`,
     dateKey: state.selectedDate,
     schedules: selectedSchedules,
     meal: selectedMeal,
     timetable: selectedTimetable,
-    timetableTitle: "시간표",
     noTimetableText: "- 시간표를 불러온 기록이 없습니다."
   });
 }
 
-function buildDayCopyText({ title, dateKey, schedules, meal, timetable, timetableTitle, noTimetableText }) {
-  const lines = [title, "", formatKoreanDate(dateKey), ""];
+function buildDayCopyText({ dateKey, schedules, meal, timetable, noTimetableText }) {
+  const lines = [formatKoreanDate(dateKey), ""];
 
-  lines.push("학사일정");
+  lines.push("📅 학사일정");
   if (schedules?.length) {
     schedules.forEach((item) => {
       lines.push(`- ${plainText(item.title)}${item.content ? `: ${plainText(item.content)}` : ""}`);
@@ -1160,15 +1156,15 @@ function buildDayCopyText({ title, dateKey, schedules, meal, timetable, timetabl
     lines.push("- 등록된 학사일정이 없습니다.");
   }
 
-  lines.push("", "급식");
+  lines.push("", "🍱 급식");
   if (meal?.dishes?.length) {
     meal.dishes.forEach((dish) => lines.push(`- ${plainText(dish)}`));
-    if (meal.calorie) lines.push(`칼로리: ${plainText(meal.calorie)}`);
+    if (meal.calorie) lines.push(`칼로리: ${normalizeCalorieText(meal.calorie)}`);
   } else {
     lines.push("- 급식정보가 없습니다.");
   }
 
-  lines.push("", timetableTitle || "시간표");
+  lines.push("", "🕘 시간표");
   if (timetable?.length) {
     timetable.forEach((item) => lines.push(`${plainText(item.period)}교시 ${plainText(item.subject || "-")}`));
   } else {
@@ -1176,6 +1172,10 @@ function buildDayCopyText({ title, dateKey, schedules, meal, timetable, timetabl
   }
 
   return lines.join("\n");
+}
+
+function normalizeCalorieText(value = "") {
+  return plainText(value).replace(/\bkcal\b/gi, "kcal");
 }
 
 function plainText(value = "") {
