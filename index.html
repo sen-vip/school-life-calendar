@@ -34,7 +34,7 @@
     </header>
 
     <main>
-      <section class="card search-card" id="search">
+      <section class="card search-card" id="search" data-root-view="settings">
         <div class="card-heading">
           <div>
             <span class="kicker">상단 설정</span>
@@ -86,7 +86,7 @@
         <div id="schoolResults" class="school-results" aria-live="polite"></div>
       </section>
 
-      <section class="selected-card" id="selectedCard">
+      <section class="selected-card" id="selectedCard" data-root-view="settings">
         <div class="selected-icon" aria-hidden="true"></div>
         <div class="selected-content">
           <span class="kicker">현재 선택한 학교</span>
@@ -99,14 +99,22 @@
         </div>
       </section>
 
-      <nav class="main-view-tabs" role="tablist" aria-label="오늘학교 보기 전환">
-        <button type="button" class="active" data-view="all" role="tab" aria-selected="true">오늘</button>
-        <button type="button" data-view="schedule" role="tab" aria-selected="false">일정</button>
-        <button type="button" data-view="meal" role="tab" aria-selected="false">급식</button>
-        <button type="button" data-view="timetable" role="tab" aria-selected="false">시간표</button>
+      <nav class="bottom-tab-bar" role="tablist" aria-label="오늘학교 주요 메뉴">
+        <button type="button" class="bottom-tab-btn active" data-view="today" role="tab" aria-selected="true" aria-controls="todaySummaryCard">
+          <span class="bottom-tab-emoji" aria-hidden="true">☀️</span>
+          <span class="bottom-tab-label">오늘</span>
+        </button>
+        <button type="button" class="bottom-tab-btn" data-view="calendar" role="tab" aria-selected="false" aria-controls="calendarArea">
+          <span class="bottom-tab-emoji" aria-hidden="true">🗓️</span>
+          <span class="bottom-tab-label">달력</span>
+        </button>
+        <button type="button" class="bottom-tab-btn" data-view="settings" role="tab" aria-selected="false" aria-controls="search">
+          <span class="bottom-tab-emoji" aria-hidden="true">🏫</span>
+          <span class="bottom-tab-label">학교설정</span>
+        </button>
       </nav>
 
-      <section class="card today-summary-card" id="todaySummaryCard" data-view-section="summary" aria-live="polite">
+      <section class="card today-summary-card" id="todaySummaryCard" data-root-view="today" aria-live="polite">
         <div class="today-summary-head">
           <div>
             <span class="kicker">오늘 한눈에 보기</span>
@@ -133,7 +141,7 @@
         </div>
       </section>
 
-      <section class="card tools-card" id="calendarArea" data-view-section="calendar">
+      <section class="card tools-card" id="calendarArea" data-root-view="calendar">
         <div class="toolbar">
           <button type="button" id="prevMonth" aria-label="이전 달">‹</button>
           <div>
@@ -148,7 +156,7 @@
         <div class="calendar" id="calendar" aria-label="월별 학교 생활 달력"></div>
       </section>
 
-      <section class="card selected-detail-card" id="detailArea" data-view-section="detail">
+      <section class="card selected-detail-card" id="detailArea" data-root-view="calendar">
         <div class="selected-detail-head" id="selectedCopyStrip">
           <div>
             <span class="kicker">선택 날짜 참고</span>

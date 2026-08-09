@@ -76,7 +76,7 @@ const state = {
   selectedSchool: null,
   currentDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   selectedDate: formatDateKey(new Date()),
-  activeTab: "all",
+  activeTab: "today",
   schedules: [],
   meals: [],
   mealsByDate: {},
@@ -132,8 +132,7 @@ const els = {
   semesterInput: document.querySelector("#semesterInput"),
   reloadTimetableBtn: document.querySelector("#reloadTimetableBtn"),
   viewTabs: document.querySelectorAll("[data-view]"),
-  viewSections: document.querySelectorAll("[data-view-section]"),
-  panels: document.querySelectorAll("[data-panel]")
+  viewSections: document.querySelectorAll("[data-root-view]")
 };
 
 function init() {
@@ -150,6 +149,7 @@ function init() {
     applyInitialCalendarState(sharedState);
     loadMonthData().then(async () => {
       await loadTimetable();
+      state.activeTab = sharedState.date ? "calendar" : "today";
       renderAll();
       requestAnimationFrame(() => {
         if (sharedState.date) {
@@ -161,6 +161,7 @@ function init() {
     });
   } else {
     applyInitialCalendarState(sharedState);
+    state.activeTab = state.selectedSchool ? (sharedState.date ? "calendar" : "today") : "settings";
     renderAll();
   }
 }
@@ -177,10 +178,9 @@ function scrollToViewSection(target, smooth = true) {
 
   // 고정 헤더와 보기 탭이 콘텐츠 제목을 덮지 않도록 실제 높이를 합산합니다.
   const headerHeight = document.querySelector(".app-header")?.offsetHeight || 74;
-  const tabsHeight = document.querySelector(".main-view-tabs")?.offsetHeight || 56;
   const breathingRoom = 18;
   const targetTop = target.getBoundingClientRect().top + window.scrollY
-    - headerHeight - tabsHeight - breathingRoom;
+    - headerHeight - breathingRoom;
 
   window.scrollTo({
     top: Math.max(targetTop, 0),
@@ -211,6 +211,14 @@ function bindEvents() {
     });
   });
 
+  document.querySelector('.outline-link[href="#search"]')?.addEventListener("click", (event) => {
+    event.preventDefault();
+    state.activeTab = "settings";
+    renderView();
+    requestAnimationFrame(() => scrollToViewSection(document.querySelector("#search"), true));
+  });
+
+
   els.resetBtn.addEventListener("click", () => {
     clearSavedPreferences();
     clearShareQuery();
@@ -237,6 +245,7 @@ function bindEvents() {
     els.gradeInput.value = "1";
     els.classInput.value = "1";
     els.semesterInput.value = getTodaySemester(state.selectedDate);
+    state.activeTab = "settings";
     renderAll();
     showCopyToast("저장된 학교와 학년·반을 초기화했어요.");
     document.querySelector("#search")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -276,10 +285,12 @@ function bindEvents() {
       state.activeTab = button.dataset.view;
       renderView();
 
-      const target = state.activeTab === "all"
-        ? els.todaySummaryCard
-        : document.querySelector("#detailArea");
-      requestAnimationFrame(() => scrollToViewSection(target, true));
+      const targetMap = {
+        today: els.todaySummaryCard,
+        calendar: document.querySelector("#calendarArea"),
+        settings: document.querySelector("#search")
+      };
+      requestAnimationFrame(() => scrollToViewSection(targetMap[state.activeTab], true));
     });
   });
 
@@ -851,13 +862,8 @@ function renderView() {
   });
 
   els.viewSections.forEach((section) => {
-    const type = section.dataset.viewSection;
-    const shouldShow = state.activeTab === "all" || type !== "summary";
-    section.hidden = !shouldShow;
-  });
-
-  els.panels.forEach((panel) => {
-    panel.style.display = state.activeTab === "all" || panel.dataset.panel === state.activeTab ? "block" : "none";
+    const type = section.dataset.rootView || "";
+    section.hidden = type !== state.activeTab;
   });
 
   document.body.dataset.activeView = state.activeTab;
@@ -896,6 +902,7 @@ function renderSchoolResults(schools, notice = "") {
       saveSelectedSchool(selected);
       setSelectedDateToToday();
       await loadMonthData();
+      state.activeTab = "today";
       renderAll();
       showCopyToast("학교와 시간표 기준을 적용했어요.");
       scrollToTodaySummary(true);
