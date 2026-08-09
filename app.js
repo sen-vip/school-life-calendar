@@ -585,13 +585,13 @@ function renderSelectedSchool() {
 
   if (!hasSchool) {
     els.topSchoolName.textContent = "오늘학교";
-    els.selectedSchoolName.textContent = "학교를 선택하면 생활 달력이 열려요.";
-    els.selectedSchoolMeta.textContent = "학사일정은 달력에 표시되고, 급식·시간표는 날짜를 누르면 확인할 수 있어요.";
+    els.selectedSchoolName.textContent = "우리학교를 설정해 주세요.";
+    els.selectedSchoolMeta.textContent = "학교와 학년·반을 한 번 설정하면 다음에도 바로 확인할 수 있어요.";
     if (els.reloadTimetableBtn) {
       els.reloadTimetableBtn.hidden = true;
       els.reloadTimetableBtn.disabled = true;
     }
-    if (els.searchTitle) els.searchTitle.textContent = "학교명 검색과 학년·반 설정";
+    if (els.searchTitle) els.searchTitle.textContent = "우리학교를 설정해 주세요";
     return;
   }
 
@@ -606,7 +606,7 @@ function renderSelectedSchool() {
     els.reloadTimetableBtn.disabled = state.timetableStatus === "loading";
     els.reloadTimetableBtn.textContent = state.timetableStatus === "loading" ? "시간표 불러오는 중" : "시간표 새로고침";
   }
-  if (els.searchTitle) els.searchTitle.textContent = "학교명 검색과 학년·반 설정";
+  if (els.searchTitle) els.searchTitle.textContent = "우리학교를 설정해 주세요";
 }
 
 function renderMonthTitle() {
