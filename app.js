@@ -1,6 +1,6 @@
 // ============================================================
-// 오늘학교 v1.4.2 Hero & Copy Format Update
-// 히어로 문구 정리 + 복사 텍스트 영역별 이모지 적용
+// 오늘학교 v1.5.0 NEIS Shared Cache Layer
+// 학사일정·급식·시간표 공통 당일 캐시 + 수동 새로고침 지원
 // ============================================================
 
 const API_CONFIG = {
@@ -9,7 +9,6 @@ const API_CONFIG = {
 };
 
 const STORAGE_KEY = "schoolLifeCalendar.selectedSchool";
-const TIMETABLE_CACHE_PREFIX = "schoolLifeTimetableCache";
 const TIMETABLE_STORAGE_KEYS = {
   grade: "schoolLifeTimetableGrade",
   className: "schoolLifeTimetableClass",
@@ -324,7 +323,7 @@ function bindEvents() {
   if (els.reloadTimetableBtn) {
     els.reloadTimetableBtn.addEventListener("click", async () => {
       saveTimetablePreferences();
-      await loadTimetable();
+      await loadTimetable({ forceRefresh: true });
       renderAll();
       showCopyToast("선택 날짜 시간표를 새로고침했어요.");
     });
@@ -372,6 +371,19 @@ async function handleSchoolSearch(fallbackKeyword = "") {
   }
 }
 
+const cacheMeta = { schedules: false, meals: false, meal: false, timetable: false };
+
+function getNeisContext() {
+  return {
+    schoolCode: state.selectedSchool?.schoolCode || "",
+    officeCode: state.selectedSchool?.officeCode || "",
+    schoolName: state.selectedSchool?.schoolName || "",
+    grade: els.gradeInput?.value || "1",
+    className: els.classInput?.value || "1",
+    semester: els.semesterInput?.value || "1"
+  };
+}
+
 async function fetchSchools(keyword, officeCode) {
   const params = new URLSearchParams({ keyword, officeCode });
   const response = await fetch(`${API_CONFIG.baseUrl}/api/schools?${params.toString()}`);
@@ -380,71 +392,107 @@ async function fetchSchools(keyword, officeCode) {
   return data.schools || [];
 }
 
-async function fetchSchedules() {
+async function fetchSchedules({ forceRefresh = false } = {}) {
   if (!state.selectedSchool) return [];
-  const params = new URLSearchParams({
-    officeCode: state.selectedSchool.officeCode,
-    schoolCode: state.selectedSchool.schoolCode,
-    year: String(state.currentDate.getFullYear()),
-    month: String(state.currentDate.getMonth() + 1)
-  });
-  const response = await fetch(`${API_CONFIG.baseUrl}/api/schedules?${params.toString()}`);
-  if (!response.ok) throw new Error("학사일정 조회 실패");
-  const data = await response.json();
-  return (data.schedules || []).map(normalizeSchedule);
+  const context = getNeisContext();
+  const monthKey = `${state.currentDate.getFullYear()}-${pad(state.currentDate.getMonth() + 1)}`;
+  const cacheKey = NeisCache.keys.schedule(context.schoolCode, monthKey);
+  const result = await NeisCache.getOrFetch(cacheKey, async () => {
+    const params = new URLSearchParams({
+      officeCode: context.officeCode,
+      schoolCode: context.schoolCode,
+      year: String(state.currentDate.getFullYear()),
+      month: String(state.currentDate.getMonth() + 1)
+    });
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/schedules?${params.toString()}`);
+    if (!response.ok) throw new Error("학사일정 조회 실패");
+    const data = await response.json();
+    return (data.schedules || []).map(normalizeSchedule);
+  }, { forceRefresh });
+  cacheMeta.schedules = result.stale;
+  return Array.isArray(result.data) ? result.data : [];
 }
 
-async function fetchMeals() {
+async function fetchMeals({ forceRefresh = false } = {}) {
   if (!state.selectedSchool) return [];
-  const params = new URLSearchParams({
-    officeCode: state.selectedSchool.officeCode,
-    schoolCode: state.selectedSchool.schoolCode,
-    year: String(state.currentDate.getFullYear()),
-    month: String(state.currentDate.getMonth() + 1)
-  });
-  const response = await fetch(`${API_CONFIG.baseUrl}/api/meals?${params.toString()}`);
-  if (!response.ok) throw new Error("급식 조회 실패");
-  const data = await response.json();
-  if (Array.isArray(data.meals)) return data.meals.map(normalizeMeal);
-  return data.meal ? [normalizeMeal(data.meal)] : [];
+  const context = getNeisContext();
+  const monthKey = `${state.currentDate.getFullYear()}-${pad(state.currentDate.getMonth() + 1)}`;
+  const cacheKey = NeisCache.keys.mealMonth(context.schoolCode, monthKey);
+  const result = await NeisCache.getOrFetch(cacheKey, async () => {
+    const params = new URLSearchParams({
+      officeCode: context.officeCode,
+      schoolCode: context.schoolCode,
+      year: String(state.currentDate.getFullYear()),
+      month: String(state.currentDate.getMonth() + 1)
+    });
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/meals?${params.toString()}`);
+    if (!response.ok) throw new Error("급식 조회 실패");
+    const data = await response.json();
+    if (Array.isArray(data.meals)) return data.meals.map(normalizeMeal);
+    return data.meal ? [normalizeMeal(data.meal)] : [];
+  }, { forceRefresh });
+
+  const meals = Array.isArray(result.data) ? result.data : [];
+  if (!result.stale) NeisCache.seedMealMonth(context.schoolCode, monthKey, meals);
+  cacheMeta.meals = result.stale;
+  return meals;
 }
 
-async function fetchMeal() {
+async function fetchMeal({ forceRefresh = false } = {}) {
   if (!state.selectedSchool || !state.selectedDate) return null;
-  const params = new URLSearchParams({
-    officeCode: state.selectedSchool.officeCode,
-    schoolCode: state.selectedSchool.schoolCode,
-    date: compactDate(state.selectedDate)
-  });
-  const response = await fetch(`${API_CONFIG.baseUrl}/api/meals?${params.toString()}`);
-  if (!response.ok) throw new Error("급식 조회 실패");
-  const data = await response.json();
-  return data.meal ? normalizeMeal(data.meal) : null;
+  const context = getNeisContext();
+  const dateKey = state.selectedDate;
+  const cacheKey = NeisCache.keys.meal(context.schoolCode, dateKey);
+  const result = await NeisCache.getOrFetch(cacheKey, async () => {
+    const params = new URLSearchParams({
+      officeCode: context.officeCode,
+      schoolCode: context.schoolCode,
+      date: compactDate(dateKey)
+    });
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/meals?${params.toString()}`);
+    if (!response.ok) throw new Error("급식 조회 실패");
+    const data = await response.json();
+    return data.meal ? normalizeMeal(data.meal) : null;
+  }, { forceRefresh });
+  cacheMeta.meal = result.stale;
+  return result.data ?? null;
 }
 
-async function fetchTimetable() {
+async function fetchTimetable({ forceRefresh = false } = {}) {
   if (!state.selectedSchool || !state.selectedDate) return [];
   const apiName = getTimetableApiName(state.selectedSchool);
-  if (!apiName) {
-    throw new Error("지원하지 않는 학교급");
-  }
+  if (!apiName) throw new Error("지원하지 않는 학교급");
 
-  const params = new URLSearchParams({
-    officeCode: state.selectedSchool.officeCode,
-    schoolCode: state.selectedSchool.schoolCode,
-    schoolType: state.selectedSchool.schoolType || state.selectedSchool.schoolName || "",
-    year: String(new Date(`${state.selectedDate}T00:00:00`).getFullYear()),
-    semester: els.semesterInput.value || "1",
-    grade: els.gradeInput.value || "1",
-    className: els.classInput.value || "1",
-    classNm: els.classInput.value || "1",
-    date: compactDate(state.selectedDate)
-  });
+  const context = getNeisContext();
+  const dateKey = state.selectedDate;
+  const cacheKey = NeisCache.keys.timetable(
+    context.schoolCode,
+    context.grade,
+    context.className,
+    context.semester,
+    dateKey
+  );
 
-  const response = await fetch(`${API_CONFIG.baseUrl}/api/timetable?${params.toString()}`);
-  if (!response.ok) throw new Error("시간표 조회 실패");
-  const data = await response.json();
-  return (data.timetable || []).map(normalizeTimetable).sort((a, b) => Number(a.period) - Number(b.period));
+  const result = await NeisCache.getOrFetch(cacheKey, async () => {
+    const params = new URLSearchParams({
+      officeCode: context.officeCode,
+      schoolCode: context.schoolCode,
+      schoolType: state.selectedSchool.schoolType || state.selectedSchool.schoolName || "",
+      year: String(new Date(`${dateKey}T00:00:00`).getFullYear()),
+      semester: context.semester,
+      grade: context.grade,
+      className: context.className,
+      classNm: context.className,
+      date: compactDate(dateKey)
+    });
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/timetable?${params.toString()}`);
+    if (!response.ok) throw new Error("시간표 조회 실패");
+    const data = await response.json();
+    return (data.timetable || []).map(normalizeTimetable).sort((a, b) => Number(a.period) - Number(b.period));
+  }, { forceRefresh });
+
+  cacheMeta.timetable = result.stale;
+  return Array.isArray(result.data) ? result.data : [];
 }
 
 function getTimetableApiName(school) {
@@ -469,8 +517,10 @@ async function loadMonthData() {
 
   try {
     state.schedules = await fetchSchedules();
-    state.scheduleStatus = "success";
-    state.scheduleMessage = state.schedules.length ? "" : "이 달에 등록된 학사일정이 없습니다.";
+    state.scheduleStatus = cacheMeta.schedules ? "stale" : "success";
+    state.scheduleMessage = cacheMeta.schedules
+      ? "최신 조회에 실패해 이전에 저장된 학사일정을 보여드려요."
+      : state.schedules.length ? "" : "이 달에 등록된 학사일정이 없습니다.";
   } catch (error) {
     const fallback = mockSchedules
       .filter((item) => item.schoolCode === state.selectedSchool.schoolCode)
@@ -486,8 +536,10 @@ async function loadMonthData() {
   try {
     state.meals = await fetchMeals();
     state.mealsByDate = Object.fromEntries(state.meals.map((meal) => [meal.date, meal]));
-    state.mealStatus = "success";
-    state.mealMessage = state.meals.length ? "" : "이 달에 등록된 급식정보가 없습니다.";
+    state.mealStatus = cacheMeta.meals ? "stale" : "success";
+    state.mealMessage = cacheMeta.meals
+      ? "최신 조회에 실패해 이전에 저장된 급식정보를 보여드려요."
+      : state.meals.length ? "" : "이 달에 등록된 급식정보가 없습니다.";
   } catch (error) {
     const fallbackMeals = Object.entries(mockMeals)
       .filter(([date]) => date.startsWith(monthPrefix))
@@ -523,7 +575,7 @@ async function loadMeal() {
   }
 }
 
-async function loadTimetable() {
+async function loadTimetable({ forceRefresh = false } = {}) {
   if (!state.selectedSchool) {
     state.timetableStatus = "idle";
     state.timetableMessage = "학교를 먼저 선택해 주세요.";
@@ -545,17 +597,15 @@ async function loadTimetable() {
   renderTimetableDetail();
 
   try {
-    state.timetable = await fetchTimetable();
+    state.timetable = await fetchTimetable({ forceRefresh });
     state.timetableStatus = "success";
     state.timetableMessage = state.timetable.length
       ? ""
       : "이 날짜의 시간표 정보가 없습니다. 학년·반·학기를 확인해 주세요.";
 
-    if (state.timetable.length) {
-      saveTimetableCache(state.selectedDate, state.timetable);
-    } else {
-      removeTimetableCache(state.selectedDate);
-    }
+    state.timetableNotice = cacheMeta.timetable
+      ? "최신 조회에 실패해 이전에 저장된 시간표를 보여드려요."
+      : "";
     if (state.selectedDate === formatDateKey(new Date())) {
       updateTodaySnapshot();
     }
@@ -1358,19 +1408,24 @@ function getTimetableCacheKey(dateKey = state.selectedDate) {
 
 function getTimetableCacheKeyWithOptions(dateKey, grade, className, semester) {
   if (!state.selectedSchool || !dateKey) return "";
-  const schoolCode = state.selectedSchool.schoolCode || "unknown";
-  return `${TIMETABLE_CACHE_PREFIX}_${schoolCode}_${dateKey.replaceAll("-", "")}_${grade || "1"}_${className || "1"}_${semester || "1"}`;
+  return NeisCache.keys.timetable(
+    state.selectedSchool.schoolCode || "unknown",
+    grade || "1",
+    className || "1",
+    semester || "1",
+    dateKey
+  );
 }
 
 function saveTimetableCache(dateKey, items) {
   const key = getTimetableCacheKey(dateKey);
-  if (!key || !items?.length) return;
-  localStorage.setItem(key, JSON.stringify(items));
+  if (!key) return;
+  NeisCache.set(key, Array.isArray(items) ? items : []);
 }
 
 function removeTimetableCache(dateKey) {
   const key = getTimetableCacheKey(dateKey);
-  if (key) localStorage.removeItem(key);
+  if (key) NeisCache.remove(key);
 }
 
 function getTimetableCache(dateKey = state.selectedDate) {
@@ -1385,12 +1440,8 @@ function getTimetableCache(dateKey = state.selectedDate) {
 function getTimetableCacheWithOptions(dateKey, grade, className, semester) {
   const key = getTimetableCacheKeyWithOptions(dateKey, grade, className, semester);
   if (!key) return [];
-  try {
-    const items = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(items) ? items : [];
-  } catch (error) {
-    return [];
-  }
+  const cached = NeisCache.get(key);
+  return cached.hit && Array.isArray(cached.data) ? cached.data : [];
 }
 
 function hasTimetableCache(dateKey) {
@@ -1398,11 +1449,15 @@ function hasTimetableCache(dateKey) {
 }
 
 function restoreTimetableFromCache() {
-  const cached = getTimetableCache(state.selectedDate);
+  const key = getTimetableCacheKey(state.selectedDate);
+  const cachedEntry = key ? NeisCache.get(key) : { hit: false };
+  const cached = cachedEntry.hit && Array.isArray(cachedEntry.data) ? cachedEntry.data : [];
   state.timetable = cached;
-  state.timetableStatus = cached.length ? "success" : "idle";
-  state.timetableMessage = "";
-  state.timetableNotice = cached.length ? "저장된 시간표 조회 결과를 보여드려요." : "";
+  state.timetableStatus = cachedEntry.hit ? "success" : "idle";
+  state.timetableMessage = cachedEntry.hit && !cached.length
+    ? "이 날짜의 시간표 정보가 없습니다. 학년·반·학기를 확인해 주세요."
+    : "";
+  state.timetableNotice = cached.length ? "오늘 저장된 시간표 조회 결과를 보여드려요." : "";
 }
 
 function getTodaySemester(dateKey = formatDateKey(new Date())) {
