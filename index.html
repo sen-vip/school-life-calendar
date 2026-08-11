@@ -151,13 +151,18 @@
 
       <section class="card tools-card" id="calendarArea" data-root-view="calendar">
         <div class="toolbar">
-          <button type="button" id="prevMonth" aria-label="이전 달">‹</button>
-          <div>
-            <span class="kicker">월별 학사일정</span>
-            <h2 id="monthTitle">2026년 6월</h2>
+          <div class="toolbar-side toolbar-side-left" aria-hidden="true"></div>
+          <div class="month-switcher" aria-label="월 선택">
+            <button type="button" id="prevMonth" aria-label="이전 달">‹</button>
+            <div class="month-switcher-copy">
+              <span class="kicker">월별 학사일정</span>
+              <h2 id="monthTitle">이번 달</h2>
+            </div>
+            <button type="button" id="nextMonth" aria-label="다음 달">›</button>
           </div>
-          <button type="button" id="nextMonth" aria-label="다음 달">›</button>
-          <button type="button" id="todayBtn">오늘</button>
+          <div class="toolbar-side toolbar-side-right">
+            <button type="button" id="todayBtn">오늘</button>
+          </div>
         </div>
 
 

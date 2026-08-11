@@ -1,5 +1,5 @@
 // ============================================================
-// 오늘학교 v1.5.1 Progressive Loading UX
+// 오늘학교 v1.5.2 Mobile Calendar Information UX
 // NEIS 공통 당일 캐시 + 순차 표시 + 지연 로딩 안내
 // ============================================================
 
@@ -767,6 +767,7 @@ function renderCalendar() {
     html += `<button type="button" class="${classes}" data-date="${key}" aria-label="${key}${escapeHtml(holidayLabel)}">
       <span class="day-number">${date.getDate()}</span>
       <span class="day-markers">${isCurrentMonth ? renderDayMarkers(daySchedules, dayMeal, key) : ""}</span>
+      <span class="mobile-day-info">${isCurrentMonth ? renderMobileDayInfo(daySchedules, dayMeal, key) : ""}</span>
     </button>`;
   }
   html += `</div>`;
@@ -1040,6 +1041,31 @@ function renderDayMarkers(scheduleItems, meal, dateKey) {
   if (meal) markers.push(`<span class="marker meal">급식</span>`);
   if (hasTimetableCache(dateKey)) markers.push(`<span class="marker timetable">시간표</span>`);
   return markers.join("");
+}
+
+function renderMobileDayInfo(scheduleItems, meal, dateKey) {
+  const usefulSchedules = (scheduleItems || []).filter((item) => {
+    const title = String(item?.title || "").replace(/\s+/g, " ").trim();
+    return title && !/^(토요휴업일|일요일)$/.test(title);
+  });
+
+  const holidaySchedule = getPublicHolidaySchedule(usefulSchedules);
+  const mainSchedule = holidaySchedule || usefulSchedules[0] || null;
+  const scheduleText = mainSchedule
+    ? String(mainSchedule.title || "일정").replace(/\s+/g, " ").trim()
+    : "";
+  const extraCount = mainSchedule && usefulSchedules.length > 1 ? usefulSchedules.length - 1 : 0;
+  const scheduleClass = holidaySchedule ? "holiday" : "schedule";
+  const scheduleHtml = scheduleText
+    ? `<span class="mobile-schedule-text ${scheduleClass}" title="${escapeHtml(scheduleText)}"><span class="mobile-schedule-label">${escapeHtml(scheduleText)}</span>${extraCount ? `<b>+${extraCount}</b>` : ""}</span>`
+    : "";
+
+  const dots = [
+    meal ? `<span class="mobile-data-dot meal" title="급식 있음" aria-hidden="true"></span>` : "",
+    hasTimetableCache(dateKey) ? `<span class="mobile-data-dot timetable" title="시간표 있음" aria-hidden="true"></span>` : ""
+  ].filter(Boolean).join("");
+
+  return `${scheduleHtml}${dots ? `<span class="mobile-data-dots" aria-hidden="true">${dots}</span>` : ""}`;
 }
 
 function renderScheduleMarkers(items) {
