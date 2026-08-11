@@ -1,10 +1,9 @@
 // ============================================================
-// 오늘학교 v1.5.0 NEIS Shared Cache Layer
-// 학사일정·급식·시간표 공통 당일 캐시 + 수동 새로고침 지원
+// 오늘학교 v1.5.1 Progressive Loading UX
+// NEIS 공통 당일 캐시 + 순차 표시 + 지연 로딩 안내
 // ============================================================
 
 const API_CONFIG = {
-  useMockOnError: true,
   baseUrl: "https://school-life-calendar-proxy.onrender.com"
 };
 
@@ -41,34 +40,6 @@ const OFFICE_OPTIONS = [
   { code: "R10", name: "경상북도교육청", shortName: "경북" },
   { code: "S10", name: "경상남도교육청", shortName: "경남" },
   { code: "T10", name: "제주특별자치도교육청", shortName: "제주" }
-];
-
-const mockSchools = [
-  { schoolName: "서울학돌초등학교", region: "서울특별시교육청", officeCode: "B10", schoolCode: "7010000", schoolType: "초등학교", address: "서울특별시 중구 학돌로 10" },
-  { schoolName: "부산학돌중학교", region: "부산광역시교육청", officeCode: "C10", schoolCode: "7020000", schoolType: "중학교", address: "부산광역시 해운대구 학돌로 20" },
-  { schoolName: "경기학돌고등학교", region: "경기도교육청", officeCode: "J10", schoolCode: "7030000", schoolType: "고등학교", address: "경기도 수원시 학돌로 30" }
-];
-
-const mockSchedules = [
-  { schoolCode: "7010000", date: "2026-06-24", title: "학부모 공개수업", content: "학부모 초청 공개수업" },
-  { schoolCode: "7010000", date: "2026-06-26", title: "학생자치회", content: "전교 학생자치회" },
-  { schoolCode: "7010000", date: "2026-06-30", title: "방학식", content: "1학기 방학식" },
-  { schoolCode: "7020000", date: "2026-06-24", title: "기말고사", content: "2·3학년 지필평가" },
-  { schoolCode: "7020000", date: "2026-06-25", title: "기말고사", content: "2·3학년 지필평가" },
-  { schoolCode: "7030000", date: "2026-06-25", title: "진로체험의 날", content: "전학년 진로체험 프로그램" }
-];
-
-const mockMeals = {
-  "2026-06-24": { dishes: ["쌀밥", "미역국", "닭갈비", "배추김치", "요구르트"], calorie: "720 Kcal", allergy: "알레르기 정보는 실제 API 연결 후 표시" },
-  "2026-06-25": { dishes: ["현미밥", "된장국", "돈육불고기", "깍두기", "과일"], calorie: "690 Kcal", allergy: "알레르기 정보는 실제 API 연결 후 표시" }
-};
-
-const mockTimetable = [
-  { period: "1", subject: "국어" },
-  { period: "2", subject: "수학" },
-  { period: "3", subject: "영어" },
-  { period: "4", subject: "과학" },
-  { period: "5", subject: "체육" }
 ];
 
 const state = {
@@ -130,9 +101,70 @@ const els = {
   classInput: document.querySelector("#classInput"),
   semesterInput: document.querySelector("#semesterInput"),
   reloadTimetableBtn: document.querySelector("#reloadTimetableBtn"),
+  dataLoadingBar: document.querySelector("#dataLoadingBar"),
+  dataLoadingTitle: document.querySelector("#dataLoadingTitle"),
+  dataLoadingDetail: document.querySelector("#dataLoadingDetail"),
   viewTabs: document.querySelectorAll("[data-view]"),
   viewSections: document.querySelectorAll("[data-root-view]")
 };
+
+let dataLoadingSequence = 0;
+let monthDataSequence = 0;
+let dataLoadingShowTimer = null;
+let dataLoadingSlowTimer = null;
+let dataLoadingHideTimer = null;
+
+function startDataLoading(
+  title = "학교생활 정보를 불러오는 중이에요",
+  detail = "급식 · 학사일정 · 시간표를 확인하고 있어요."
+) {
+  const token = ++dataLoadingSequence;
+  window.clearTimeout(dataLoadingShowTimer);
+  window.clearTimeout(dataLoadingSlowTimer);
+  window.clearTimeout(dataLoadingHideTimer);
+
+  if (!els.dataLoadingBar) return token;
+  els.dataLoadingTitle.textContent = title;
+  els.dataLoadingDetail.textContent = detail;
+
+  const show = () => {
+    if (token !== dataLoadingSequence || !els.dataLoadingBar) return;
+    els.dataLoadingBar.hidden = false;
+    requestAnimationFrame(() => els.dataLoadingBar?.classList.add("is-visible"));
+  };
+
+  if (!els.dataLoadingBar.hidden) {
+    els.dataLoadingBar.classList.add("is-visible");
+  } else {
+    dataLoadingShowTimer = window.setTimeout(show, 350);
+  }
+
+  dataLoadingSlowTimer = window.setTimeout(() => {
+    if (token !== dataLoadingSequence || !els.dataLoadingBar) return;
+    show();
+    els.dataLoadingTitle.textContent = "정보를 확인하고 있어요";
+    els.dataLoadingDetail.textContent = "처음 연결할 때는 조금 더 걸릴 수 있어요.";
+  }, 4000);
+
+  return token;
+}
+
+function updateDataLoading(token, title, detail) {
+  if (token !== dataLoadingSequence || !els.dataLoadingBar) return;
+  if (title) els.dataLoadingTitle.textContent = title;
+  if (detail) els.dataLoadingDetail.textContent = detail;
+}
+
+function finishDataLoading(token) {
+  if (token !== dataLoadingSequence) return;
+  window.clearTimeout(dataLoadingShowTimer);
+  window.clearTimeout(dataLoadingSlowTimer);
+  if (!els.dataLoadingBar || els.dataLoadingBar.hidden) return;
+  els.dataLoadingBar.classList.remove("is-visible");
+  dataLoadingHideTimer = window.setTimeout(() => {
+    if (token === dataLoadingSequence && els.dataLoadingBar) els.dataLoadingBar.hidden = true;
+  }, 180);
+}
 
 function init() {
   renderOfficeOptions();
@@ -146,9 +178,9 @@ function init() {
     state.selectedSchool = initialSchool;
     if (sharedState.school) saveSelectedSchool(initialSchool);
     applyInitialCalendarState(sharedState);
-    loadMonthData().then(async () => {
-      await loadTimetable();
-      state.activeTab = sharedState.date ? "calendar" : "today";
+    state.activeTab = sharedState.date ? "calendar" : "today";
+    renderAll();
+    loadMonthData().then(() => {
       renderAll();
       requestAnimationFrame(() => {
         if (sharedState.date) {
@@ -265,7 +297,6 @@ function bindEvents() {
   els.todayBtn.addEventListener("click", async () => {
     setSelectedDateToToday();
     await loadMonthData();
-    await loadDayData();
     renderAll();
     scrollToTodaySummary(true);
   });
@@ -366,7 +397,7 @@ async function handleSchoolSearch(fallbackKeyword = "") {
     state.schools = schools;
     renderSchoolResults(schools);
   } catch (error) {
-    state.schools = searchMockSchools(keyword, els.officeCode.value);
+    state.schools = [];
     renderSchoolResults([], "학교 검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
   }
 }
@@ -505,6 +536,23 @@ function getTimetableApiName(school) {
 
 async function loadMonthData() {
   if (!state.selectedSchool) return;
+
+  const loadSequence = ++monthDataSequence;
+  const loadingToken = startDataLoading();
+  const schoolCode = state.selectedSchool.schoolCode;
+  const currentDate = new Date(state.currentDate);
+  const monthPrefix = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}`;
+  const isCurrentLoad = () => {
+    const currentMonthPrefix = `${state.currentDate.getFullYear()}-${pad(state.currentDate.getMonth() + 1)}`;
+    return loadSequence === monthDataSequence
+      && state.selectedSchool?.schoolCode === schoolCode
+      && currentMonthPrefix === monthPrefix;
+  };
+
+  state.schedules = [];
+  state.meals = [];
+  state.mealsByDate = {};
+  state.meal = null;
   state.scheduleStatus = "loading";
   state.scheduleMessage = "학사일정을 불러오는 중입니다.";
   state.mealStatus = "loading";
@@ -512,51 +560,74 @@ async function loadMonthData() {
   renderCalendar();
   renderScheduleDetail();
   renderMealDetail();
+  renderTodaySummary();
 
-  const monthPrefix = `${state.currentDate.getFullYear()}-${pad(state.currentDate.getMonth() + 1)}`;
+  const scheduleTask = (async () => {
+    try {
+      const schedules = await fetchSchedules();
+      if (!isCurrentLoad()) return;
+      state.schedules = schedules;
+      state.scheduleStatus = cacheMeta.schedules ? "stale" : "success";
+      state.scheduleMessage = cacheMeta.schedules
+        ? "최신 조회에 실패해 이전에 저장된 학사일정을 보여드려요."
+        : state.schedules.length ? "" : "이 달에 등록된 학사일정이 없습니다.";
+    } catch (error) {
+      if (!isCurrentLoad()) return;
+      state.schedules = [];
+      state.scheduleStatus = "error";
+      state.scheduleMessage = "학사일정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
+    } finally {
+      if (isCurrentLoad()) {
+        updateTodaySnapshot();
+        renderCalendar();
+        renderScheduleDetail();
+        renderTodaySummary();
+      }
+    }
+  })();
 
-  try {
-    state.schedules = await fetchSchedules();
-    state.scheduleStatus = cacheMeta.schedules ? "stale" : "success";
-    state.scheduleMessage = cacheMeta.schedules
-      ? "최신 조회에 실패해 이전에 저장된 학사일정을 보여드려요."
-      : state.schedules.length ? "" : "이 달에 등록된 학사일정이 없습니다.";
-  } catch (error) {
-    const fallback = mockSchedules
-      .filter((item) => item.schoolCode === state.selectedSchool.schoolCode)
-      .filter((item) => item.date.startsWith(monthPrefix));
+  const mealTask = (async () => {
+    try {
+      const meals = await fetchMeals();
+      if (!isCurrentLoad()) return;
+      state.meals = meals;
+      state.mealsByDate = Object.fromEntries(state.meals.map((meal) => [meal.date, meal]));
+      state.mealStatus = cacheMeta.meals ? "stale" : "success";
+      state.mealMessage = cacheMeta.meals
+        ? "최신 조회에 실패해 이전에 저장된 급식정보를 보여드려요."
+        : state.meals.length ? "" : "이 달에 등록된 급식정보가 없습니다.";
+    } catch (error) {
+      if (!isCurrentLoad()) return;
+      state.meals = [];
+      state.mealsByDate = {};
+      state.mealStatus = "error";
+      state.mealMessage = "급식정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
+    } finally {
+      if (isCurrentLoad()) {
+        state.meal = state.mealsByDate[state.selectedDate] || null;
+        updateTodaySnapshot();
+        renderCalendar();
+        renderMealDetail();
+        renderTodaySummary();
+      }
+    }
+  })();
 
-    state.schedules = fallback;
-    state.scheduleStatus = fallback.length ? "mock" : "error";
-    state.scheduleMessage = fallback.length
-      ? "학사일정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
-      : "학사일정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
-  }
-
-  try {
-    state.meals = await fetchMeals();
-    state.mealsByDate = Object.fromEntries(state.meals.map((meal) => [meal.date, meal]));
-    state.mealStatus = cacheMeta.meals ? "stale" : "success";
-    state.mealMessage = cacheMeta.meals
-      ? "최신 조회에 실패해 이전에 저장된 급식정보를 보여드려요."
-      : state.meals.length ? "" : "이 달에 등록된 급식정보가 없습니다.";
-  } catch (error) {
-    const fallbackMeals = Object.entries(mockMeals)
-      .filter(([date]) => date.startsWith(monthPrefix))
-      .map(([date, meal]) => normalizeMeal({ date, ...meal, mealName: "중식" }));
-
-    state.meals = fallbackMeals;
-    state.mealsByDate = Object.fromEntries(fallbackMeals.map((meal) => [meal.date, meal]));
-    state.mealStatus = fallbackMeals.length ? "mock" : "error";
-    state.mealMessage = fallbackMeals.length
-      ? "급식정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
-      : "급식정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
+  await Promise.allSettled([scheduleTask, mealTask]);
+  if (!isCurrentLoad()) {
+    finishDataLoading(loadingToken);
+    return;
   }
 
   updateTodaySnapshot();
+  updateDataLoading(loadingToken, "거의 다 불러왔어요", "오늘 시간표를 확인하고 있어요.");
   await loadDayData();
+  if (isCurrentLoad()) {
+    renderTimetableDetail();
+    renderTodaySummary();
+  }
+  finishDataLoading(loadingToken);
 }
-
 async function loadDayData() {
   state.meal = state.mealsByDate[state.selectedDate] || null;
   state.classSwitcherOpen = false;
@@ -571,7 +642,9 @@ async function loadMeal() {
   try {
     state.meal = await fetchMeal();
   } catch (error) {
-    state.meal = mockMeals[state.selectedDate] || null;
+    state.meal = null;
+    state.mealStatus = "error";
+    state.mealMessage = "급식정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
   }
 }
 
@@ -1326,14 +1399,6 @@ function clearShareQuery() {
   if (!window.history?.replaceState || !window.location.search) return;
   const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
   window.history.replaceState({}, document.title, cleanUrl);
-}
-
-function searchMockSchools(keyword, officeCode) {
-  const lowered = keyword.toLowerCase();
-  return mockSchools.filter((school) => {
-    const text = `${school.schoolName} ${school.region} ${school.schoolType} ${school.address}`.toLowerCase();
-    return text.includes(lowered) && (!officeCode || school.officeCode === officeCode);
-  });
 }
 
 function normalizeMeal(meal = {}) {
