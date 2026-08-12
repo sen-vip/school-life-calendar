@@ -1,5 +1,5 @@
 // ============================================================
-// 오늘학교 v1.5.5 출시 전 1차 안정화
+// 오늘학교 v1.5.7 설정·중복 UI 다이어트 (1·2차 로직 유지)
 // NEIS 공통 당일 캐시 + 순차 표시 + 지연 로딩 안내
 // ============================================================
 
@@ -77,6 +77,7 @@ const els = {
   resetBtn: document.querySelector("#resetBtn"),
   selectedSchoolName: document.querySelector("#selectedSchoolName"),
   selectedSchoolMeta: document.querySelector("#selectedSchoolMeta"),
+  classSettingHelper: document.querySelector("#classSettingHelper"),
   todaySummaryCard: document.querySelector("#todaySummaryCard"),
   todaySummaryTitle: document.querySelector("#todaySummaryTitle"),
   todaySummaryDate: document.querySelector("#todaySummaryDate"),
@@ -810,12 +811,13 @@ function renderSelectedSchool() {
   if (!hasSchool) {
     els.topSchoolName.textContent = "오늘학교";
     els.selectedSchoolName.textContent = "우리학교를 설정해 주세요.";
-    els.selectedSchoolMeta.textContent = "학교와 학년·반을 한 번 설정하면 다음에도 바로 확인할 수 있어요.";
+    els.selectedSchoolMeta.textContent = "";
+    if (els.classSettingHelper) els.classSettingHelper.textContent = "학교를 먼저 선택해 주세요.";
     if (els.reloadTimetableBtn) {
       els.reloadTimetableBtn.hidden = true;
       els.reloadTimetableBtn.disabled = true;
     }
-    if (els.searchTitle) els.searchTitle.textContent = "우리학교를 설정해 주세요";
+    if (els.searchTitle) els.searchTitle.textContent = "우리학교 설정";
     return;
   }
 
@@ -830,7 +832,8 @@ function renderSelectedSchool() {
     els.reloadTimetableBtn.disabled = state.timetableStatus === "loading" || !state.selectedDate;
     els.reloadTimetableBtn.textContent = state.timetableStatus === "loading" ? "시간표 불러오는 중" : "시간표 새로고침";
   }
-  if (els.searchTitle) els.searchTitle.textContent = "우리학교를 설정해 주세요";
+  if (els.classSettingHelper) els.classSettingHelper.textContent = "시간표를 확인할 학년·반·학기예요.";
+  if (els.searchTitle) els.searchTitle.textContent = "우리학교 설정";
 }
 
 function renderMonthTitle() {
@@ -1000,7 +1003,7 @@ function renderScheduleDetail() {
   const items = state.schedules.filter((item) => item.date === state.selectedDate);
   const notice = state.scheduleMessage && state.scheduleStatus !== "success" ? `<p class="detail-notice">${escapeHtml(state.scheduleMessage)}</p>` : "";
   if (!items.length) {
-    els.scheduleDetail.innerHTML = `${notice}<p class="empty">이 날짜에 등록된 학사일정이 없어요.</p><p class="detail-empty-note">다른 날짜를 눌러 학사일정이 있는 날을 확인해 보세요.</p>`;
+    els.scheduleDetail.innerHTML = `${notice}<p class="empty">이 날짜에 등록된 학사일정이 없어요.</p>`;
     return;
   }
   els.scheduleDetail.innerHTML = `${notice}<ul>${items.map((item) => `<li><b>${escapeHtml(item.title)}</b>${item.content ? ` <span class="empty">${escapeHtml(item.content)}</span>` : ""}</li>`).join("")}</ul>`;
@@ -1066,7 +1069,7 @@ function renderTimetableDetail() {
   } else if (state.timetableMessage) {
     body = `<p class="empty">${escapeHtml(state.timetableMessage)}</p>`;
   } else {
-    body = `<p class="empty">날짜를 누르거나 반을 바꾸면 선택 날짜 기준 시간표가 자동 적용돼요.</p>`;
+    body = `<p class="empty">이 날짜에 등록된 시간표가 없어요.</p>`;
   }
 
   const switcher = state.classSwitcherOpen
@@ -1088,15 +1091,10 @@ function renderTimetableDetail() {
 
   els.timetableDetail.innerHTML = `
     <div class="timetable-detail-head">
-      <strong>${escapeHtml(grade)}학년 ${escapeHtml(className)}반 · ${escapeHtml(semester)}학기 기준</strong>
+      <strong>${escapeHtml(grade)}학년 ${escapeHtml(className)}반 · ${escapeHtml(semester)}학기</strong>
       <button type="button" class="quick-switch-btn" data-timetable-action="toggle-class">${state.classSwitcherOpen ? "닫기" : "반 바꾸기"}</button>
     </div>
     ${notice}
-    <div class="timetable-ready">
-      <span>조회 기준</span>
-      <b>${escapeHtml(grade)}학년 ${escapeHtml(className)}반 · ${escapeHtml(semester)}학기</b>
-      <p>${apiName ? "날짜를 바꾸면 이 기준으로 시간표가 자동 갱신됩니다." : "선택 학교의 학교급을 확인할 수 없습니다."}</p>
-    </div>
     ${switcher}
     ${body}
   `;
@@ -1153,6 +1151,8 @@ function renderSchoolResults(schools, notice = "") {
       setSelectedDateToToday();
       await loadMonthData();
       state.activeTab = "today";
+      els.schoolResults.innerHTML = "";
+      state.schools = [];
       renderAll();
       showCopyToast("학교와 시간표 기준을 적용했어요.");
       scrollToTodaySummary(true);

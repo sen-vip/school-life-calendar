@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=purple2" />
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=purple2" />
   <link rel="manifest" href="site.webmanifest?v=purple2" />
-  <link rel="stylesheet" href="style.css?v=1.5.5" />
+  <link rel="stylesheet" href="style.css?v=1.5.7" />
 </head>
 <body>
   <header class="app-header">
@@ -25,7 +25,7 @@
         <span id="topSchoolName">오늘학교</span>
       </a>
       <nav class="top-actions" aria-label="상단 메뉴">
-        <a class="outline-link" href="#search">학교변경</a>
+        <a class="outline-link school-change-link" href="#search">학교변경</a>
         <a class="help-link" href="https://github.com/sen-vip/school-life-calendar#readme" target="_blank" rel="noopener noreferrer">도움말</a>
       </nav>
       <div class="data-loading-bar" id="dataLoadingBar" hidden role="status" aria-live="polite" aria-atomic="true">
@@ -50,22 +50,25 @@
         <div class="card-heading">
           <div>
             <span class="kicker">학교 설정</span>
-            <h2 id="searchTitle">우리학교를 설정해 주세요</h2>
+            <h2 id="searchTitle">우리학교 설정</h2>
           </div>
           <button type="button" class="ghost-button" id="resetBtn">저장 초기화</button>
         </div>
 
         <div class="top-setting-grid">
           <div class="setting-panel school-setting-panel">
-            <span class="setting-label">학교명 검색</span>
+            <div class="setting-panel-head">
+              <span class="setting-step" aria-hidden="true">1</span>
+              <span class="setting-label">학교 찾기</span>
+            </div>
             <form class="search-form" id="schoolSearchForm">
               <label class="search-field">
-                <span>학교급</span>
+                <span>지역</span>
                 <select id="officeCode" aria-label="시도교육청 선택"></select>
               </label>
               <label class="search-field">
                 <span>학교명</span>
-                <input id="schoolKeyword" type="search" placeholder="예: 학돌중, 서울학돌초" autocomplete="off" />
+                <input id="schoolKeyword" type="search" placeholder="예: 대청중학교" autocomplete="off" />
               </label>
               <div class="search-field search-submit-field">
                 <span aria-hidden="true">검색</span>
@@ -81,29 +84,33 @@
           </div>
 
           <div class="setting-panel class-setting-panel">
-            <span class="setting-label">학년·반 설정</span>
+            <div class="setting-panel-head">
+              <span class="setting-step" aria-hidden="true">2</span>
+              <span class="setting-label">내 정보</span>
+            </div>
             <div class="timetable-controls top-timetable-controls">
               <label>학년 <input id="gradeInput" type="number" min="1" max="6" value="1" /></label>
               <label>반 <input id="classInput" type="number" min="1" max="20" value="1" /></label>
-              <label>학기
+              <label>
+                <span class="field-label-row"><span>학기</span><small>시간표 조회 기준</small></span>
                 <select id="semesterInput">
                   <option value="1">1학기</option>
                   <option value="2">2학기</option>
                 </select>
               </label>
             </div>
-            <p class="save-helper timetable-save-helper">학교를 선택하면 입력한 학년·반 기준으로 시간표가 자동 적용돼요.</p>
+            <p class="save-helper timetable-save-helper" id="classSettingHelper">학교를 먼저 선택해 주세요.</p>
           </div>
         </div>
         <div id="schoolResults" class="school-results" aria-live="polite"></div>
       </section>
 
-      <section class="selected-card" id="selectedCard" data-root-view="settings">
+      <section class="selected-card selected-card--compact" id="selectedCard" data-root-view="settings">
         <div class="selected-icon" aria-hidden="true"></div>
         <div class="selected-content">
-          <span class="kicker">현재 선택한 학교</span>
+          <span class="kicker">선택된 학교</span>
           <h2 id="selectedSchoolName">우리학교를 설정해 주세요.</h2>
-          <p id="selectedSchoolMeta">학교와 학년·반을 한 번 설정하면 다음에도 바로 확인할 수 있어요.</p>
+          <p id="selectedSchoolMeta"></p>
           <div class="selected-action-row">
             <button type="button" class="reload-timetable-btn" id="reloadTimetableBtn">시간표 새로고침</button>
             <button type="button" class="share-button" id="shareSchoolBtn">공유하기</button>
@@ -138,15 +145,15 @@
           </div>
         </div>
         <div class="today-summary-grid">
-          <article class="today-summary-item">
+          <article class="today-summary-item today-summary-item--schedule">
             <strong class="summary-title summary-title-schedule"><span class="title-emoji" aria-hidden="true">📅</span><span>학사일정</span></strong>
             <div id="todayScheduleSummary" class="today-summary-body">학교를 선택해 주세요.</div>
           </article>
-          <article class="today-summary-item">
+          <article class="today-summary-item today-summary-item--meal">
             <strong id="todayMealTitle" class="summary-title summary-title-meal"><span class="title-emoji" aria-hidden="true">🍱</span><span>급식</span></strong>
             <div id="todayMealSummary" class="today-summary-body">학교를 선택해 주세요.</div>
           </article>
-          <article class="today-summary-item">
+          <article class="today-summary-item today-summary-item--timetable">
             <strong id="todayTimetableTitle" class="summary-title summary-title-timetable"><span class="title-emoji" aria-hidden="true">🕘</span><span>시간표</span></strong>
             <div id="todayTimetableSummary" class="today-summary-body">학년·반·학기를 입력하고 시간표를 불러오면 표시됩니다.</div>
           </article>
@@ -176,9 +183,8 @@
       <section class="card selected-detail-card" id="detailArea" data-root-view="calendar">
         <div class="selected-detail-head" id="selectedCopyStrip">
           <div>
-            <span class="kicker">선택 날짜 참고</span>
+            <span class="kicker">선택한 날짜</span>
             <strong id="selectedCopyDate">날짜를 선택해 주세요.</strong>
-            <p>달력에서 날짜를 누르면 해당 날짜의 학사일정, 급식, 시간표를 확인할 수 있어요.</p>
           </div>
           <div class="selected-copy-actions">
             <button type="button" class="copy-button ghost-copy" id="copySelectedBtn">선택 날짜 복사</button>
@@ -186,9 +192,6 @@
           </div>
         </div>
 
-        <div class="detail-section-label" aria-hidden="true">
-          <span>이 날짜의 학사일정 · 급식 · 시간표</span>
-        </div>
 
         <div class="detail-grid">
           <article class="detail-card schedule-detail" data-panel="schedule">
@@ -209,7 +212,7 @@
             <div class="detail-title timetable-title">
               <h2><span class="title-emoji" aria-hidden="true">🕘</span><span>시간표</span></h2>
             </div>
-            <div id="timetableDetail" class="detail-body">학교를 선택하면 입력한 학년·반 기준으로 시간표가 자동 적용돼요.</div>
+            <div id="timetableDetail" class="detail-body">학교를 선택해 주세요.</div>
           </article>
         </div>
       </section>
@@ -224,6 +227,6 @@
 
   <div class="copy-toast" id="copyToast" role="status" aria-live="polite"></div>
   <script src="neis-cache.js"></script>
-  <script src="app.js?v=1.5.5"></script>
+  <script src="app.js?v=1.5.7"></script>
 </body>
 </html>

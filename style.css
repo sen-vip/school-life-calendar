@@ -2275,3 +2275,396 @@ body:not(.has-selected-school) .selected-action-row {
     width: 100%;
   }
 }
+
+
+/* =========================================================
+   v1.5.6 모바일 사용성 개선
+   - 오늘 카드 우선순위: 시간표 → 급식 → 학사일정
+   - 달력/상단 메뉴 가독성 개선
+   - 주요 터치 영역 44px 안팎 확보
+   - 작은 화면 가로 넘침 방지
+========================================================= */
+@media (max-width: 640px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .app-header-inner {
+    height: 60px;
+    gap: 8px;
+  }
+
+  .brand-home {
+    gap: 8px;
+    font-size: 15px;
+  }
+
+  #topSchoolName {
+    max-width: 34vw;
+  }
+
+  .top-actions {
+    flex: 0 0 auto;
+    gap: 2px;
+  }
+
+  .top-actions a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  /* 모바일 오늘 화면: 시간표 → 급식 → 학사일정 */
+  .today-summary-item--timetable { order: 1; }
+  .today-summary-item--meal { order: 2; }
+  .today-summary-item--schedule { order: 3; }
+
+  .today-summary-item strong {
+    font-size: 16px;
+  }
+
+  .today-summary-body,
+  .detail-body {
+    font-size: 14px;
+    line-height: 1.62;
+  }
+
+  .today-calorie,
+  .today-more,
+  .meal-note,
+  .meal-allergy p {
+    font-size: 12px;
+  }
+
+  /* 자주 누르는 버튼은 시각적 크기를 과도하게 키우지 않으면서 터치 높이 확보 */
+  .ghost-button,
+  .reload-timetable-btn,
+  .share-button,
+  .copy-button,
+  .quick-switch-btn,
+  .quick-apply-btn,
+  .quick-cancel-btn,
+  .school-search-retry-btn,
+  .share-fallback-box button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .bottom-tab-bar {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 20px);
+    max-width: 640px;
+    gap: 6px;
+    padding: 7px;
+  }
+
+  .bottom-tab-btn {
+    min-height: 60px;
+    padding: 8px 6px;
+  }
+
+  .bottom-tab-emoji {
+    font-size: 21px;
+  }
+
+  .bottom-tab-label {
+    font-size: 13px;
+  }
+
+  .app-shell {
+    padding-bottom: calc(126px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 달력 툴바 */
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 12px 12px;
+  }
+
+  .month-switcher {
+    gap: 5px;
+  }
+
+  .month-switcher-copy {
+    min-width: 0;
+    margin-right: 1px;
+  }
+
+  .month-switcher-copy .kicker {
+    font-size: 11px;
+  }
+
+  .month-switcher-copy h2 {
+    font-size: 20px;
+  }
+
+  .month-switcher button {
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    font-size: 21px;
+  }
+
+  .toolbar-side-right #todayBtn {
+    min-width: 52px;
+    height: 44px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .weekday {
+    padding: 8px 1px;
+    font-size: 11px;
+  }
+
+  .day-cell {
+    min-width: 0;
+    min-height: 70px;
+    padding: 5px 1px 5px;
+  }
+
+  .day-number {
+    width: 27px;
+    height: 27px;
+    font-size: 13px;
+  }
+
+  .mobile-day-info {
+    min-width: 0;
+    min-height: 30px;
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  .mobile-schedule-text {
+    width: calc(100% - 2px);
+    min-width: 0;
+    padding: 2px 1px;
+    font-size: 10.5px;
+    line-height: 1.2;
+    font-weight: 750;
+  }
+
+  .mobile-schedule-text b {
+    font-size: 10px;
+  }
+
+  .mobile-data-dots {
+    min-height: 6px;
+    gap: 3px;
+  }
+
+  .mobile-data-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  /* 긴 학교명/버튼/시간표가 폭을 밀지 않도록 */
+  .card,
+  .selected-card,
+  .today-summary-item,
+  .detail-card,
+  .selected-action-row,
+  .selected-copy-actions,
+  .quick-class-actions,
+  .timetable-controls,
+  .search-form,
+  .today-timetable-list li {
+    min-width: 0;
+  }
+
+  .today-timetable-list li {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
+  .today-timetable-list li > *,
+  .timetable-list li > * {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  #topSchoolName {
+    max-width: 28vw;
+  }
+
+  .top-actions a {
+    min-height: 44px;
+    padding-inline: 6px;
+    font-size: 12.5px;
+  }
+
+  .toolbar {
+    gap: 5px;
+    padding-inline: 8px;
+  }
+
+  .month-switcher {
+    gap: 3px;
+  }
+
+  .month-switcher-copy h2 {
+    font-size: 18px;
+  }
+
+  /* 작은 화면에서도 터치 영역은 축소하지 않음 */
+  .month-switcher button {
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .toolbar-side-right #todayBtn {
+    min-width: 48px;
+    height: 44px;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+
+  .weekday {
+    font-size: 10.5px;
+  }
+
+  .day-cell {
+    min-height: 68px;
+  }
+
+  .mobile-schedule-text {
+    font-size: 10px;
+  }
+
+  .mobile-schedule-text b {
+    font-size: 9.5px;
+  }
+
+  .bottom-tab-bar {
+    width: calc(100% - 16px);
+  }
+}
+
+
+/* =========================================================
+   v1.5.7 설정·중복 UI 다이어트
+   - 학교 찾기 → 내 정보의 2단계 시각 흐름
+   - 학교 선택 전 중복 선택 카드 숨김
+   - 선택 후 검색 결과 자동 정리
+   - 모바일 상단 학교변경 중복 제거
+   - 반복 설명/시간표 조회 기준 중복 축소
+========================================================= */
+.setting-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.setting-step {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.setting-label {
+  font-weight: 750;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.field-label-row small {
+  color: #98a2b3;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 첫 진입은 학교 찾기에 집중하고, 학교 선택 후 내 정보가 자연스럽게 강조되도록 */
+body:not(.has-selected-school) .class-setting-panel {
+  opacity: 0.68;
+}
+
+body:not(.has-selected-school) .selected-card,
+body:not(.has-selected-school) #resetBtn {
+  display: none;
+}
+
+body.has-selected-school .school-setting-panel {
+  opacity: 0.82;
+}
+
+body.has-selected-school .class-setting-panel .setting-step {
+  background: var(--primary);
+  color: #fff;
+}
+
+.selected-card--compact {
+  padding-block: 17px;
+}
+
+.selected-card--compact .selected-card h2,
+.selected-card--compact h2 {
+  margin-top: 2px;
+}
+
+/* 날짜 선택 영역은 상태와 행동만 남긴다. */
+.selected-detail-head {
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  /* 하단 학교설정 탭과 같은 기능이므로 모바일 상단 학교변경은 숨긴다. */
+  .school-change-link {
+    display: none !important;
+  }
+
+  #topSchoolName {
+    max-width: 52vw;
+  }
+
+  .setting-panel-head {
+    min-height: 26px;
+  }
+
+  .setting-step {
+    width: 22px;
+    height: 22px;
+    flex-basis: 22px;
+    font-size: 11px;
+  }
+
+  body:not(.has-selected-school) .class-setting-panel {
+    opacity: 0.66;
+  }
+
+  body.has-selected-school .school-setting-panel {
+    opacity: 1;
+  }
+
+  .selected-card--compact {
+    padding: 14px 16px;
+  }
+}
