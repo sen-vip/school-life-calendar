@@ -9,11 +9,11 @@
   --muted-light: #98a2b3;
   --line: #e5e8eb;
   --line-strong: #d7dce2;
-  --primary: #5B5FEF;
-  --primary-hover: #4338CA;
-  --primary-soft: #EEF2FF;
-  --schedule: #7667d9;
-  --schedule-soft: #f1efff;
+  --primary: #6C4CF1;
+  --primary-hover: #4E2ECF;
+  --primary-soft: #F3EEFF;
+  --schedule: #7B61FF;
+  --schedule-soft: #F3EEFF;
   --meal: #c8782c;
   --meal-soft: #fff5e8;
   --timetable: #2f7d5d;
@@ -758,9 +758,9 @@ body:not(.has-selected-school) .selected-action-row {
 }
 
 .class-badge {
-  border: 1px solid #d9dcff;
+  border: 1px solid #DED7FF;
   background: var(--primary-soft);
-  color: #4d56bd;
+  color: #5A43C8;
 }
 
 .today-summary-body {
@@ -905,7 +905,7 @@ body:not(.has-selected-school) .selected-action-row {
 
 .day-cell.selected {
   position: relative;
-  background: #fafaff;
+  background: #FAF8FF;
 }
 
 .day-cell.selected::after {
@@ -977,7 +977,7 @@ body:not(.has-selected-school) .selected-action-row {
 
 .marker.schedule {
   background: var(--schedule-soft);
-  color: #5e51bc;
+  color: #5D46D6;
 }
 
 .marker.holiday {
@@ -2113,7 +2113,7 @@ body:not(.has-selected-school) .selected-action-row {
     padding: 2px 2px;
     border-radius: 4px;
     overflow: hidden;
-    color: #4657a2;
+    color: #654ED8;
     background: var(--schedule-soft);
     font-size: 8.5px;
     line-height: 1.25;
@@ -2208,5 +2208,70 @@ body:not(.has-selected-school) .selected-action-row {
 
   .mobile-schedule-text b {
     flex: 0 0 auto;
+  }
+}
+
+
+/* v1.5.5 출시 전 1차 안정화: 검색 지연/재시도 + 선택 날짜 안전 상태 */
+.school-search-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.school-search-state > div {
+  min-width: 0;
+}
+
+.school-search-state strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.school-search-state p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.school-search-retry-btn {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: #475467;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.school-search-retry-btn:hover {
+  border-color: #c5cad1;
+  background: var(--surface-subtle);
+  color: var(--ink);
+}
+
+.copy-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.copy-button:disabled:hover {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: #475467;
+}
+
+@media (max-width: 640px) {
+  .school-search-state {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .school-search-retry-btn {
+    width: 100%;
   }
 }

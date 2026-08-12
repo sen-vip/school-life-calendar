@@ -1,5 +1,5 @@
 // ============================================================
-// 오늘학교 v1.5.2 Mobile Calendar Information UX
+// 오늘학교 v1.5.5 출시 전 1차 안정화
 // NEIS 공통 당일 캐시 + 순차 표시 + 지연 로딩 안내
 // ============================================================
 
@@ -113,6 +113,10 @@ let monthDataSequence = 0;
 let dataLoadingShowTimer = null;
 let dataLoadingSlowTimer = null;
 let dataLoadingHideTimer = null;
+let schoolSearchSequence = 0;
+let schoolSearchController = null;
+let schoolSearchSlowTimer = null;
+let schoolSearchTimeoutTimer = null;
 
 function startDataLoading(
   title = "학교생활 정보를 불러오는 중이에요",
@@ -204,6 +208,16 @@ function setSelectedDateToToday() {
   state.selectedDate = formatDateKey(today);
 }
 
+function clearSelectedCalendarDate() {
+  state.selectedDate = "";
+  state.meal = null;
+  state.timetable = [];
+  state.timetableStatus = "idle";
+  state.timetableMessage = "확인할 날짜를 선택해 주세요.";
+  state.timetableNotice = "";
+  state.classSwitcherOpen = false;
+}
+
 function scrollToViewSection(target, smooth = true) {
   if (!target) return;
 
@@ -231,6 +245,12 @@ function renderOfficeOptions() {
 function bindEvents() {
   els.schoolSearchForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    await handleSchoolSearch();
+  });
+
+  els.schoolResults.addEventListener("click", async (event) => {
+    const retryButton = event.target.closest('[data-school-search-action="retry"]');
+    if (!retryButton) return;
     await handleSchoolSearch();
   });
 
@@ -284,12 +304,14 @@ function bindEvents() {
 
   els.prevMonth.addEventListener("click", async () => {
     state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() - 1, 1);
+    clearSelectedCalendarDate();
     await loadMonthData();
     renderAll();
   });
 
   els.nextMonth.addEventListener("click", async () => {
     state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() + 1, 1);
+    clearSelectedCalendarDate();
     await loadMonthData();
     renderAll();
   });
@@ -353,10 +375,24 @@ function bindEvents() {
 
   if (els.reloadTimetableBtn) {
     els.reloadTimetableBtn.addEventListener("click", async () => {
+      if (!state.selectedDate) {
+        showCopyToast("달력에서 확인할 날짜를 먼저 선택해 주세요.", true);
+        return;
+      }
+
       saveTimetablePreferences();
       await loadTimetable({ forceRefresh: true });
       renderAll();
-      showCopyToast("선택 날짜 시간표를 새로고침했어요.");
+
+      if (cacheMeta.timetable) {
+        showCopyToast("새로 불러오지 못해 저장된 시간표 조회 결과를 보여드려요.", true);
+      } else if (state.timetableStatus === "success") {
+        showCopyToast("시간표를 새로고침했어요.");
+      } else if (state.timetableStatus === "empty") {
+        showCopyToast("이 날짜에 등록된 시간표가 없어요.");
+      } else {
+        showCopyToast("시간표를 불러오지 못했어요.", true);
+      }
     });
   }
 
@@ -368,6 +404,10 @@ function bindEvents() {
 
   if (els.copySelectedBtn) {
     els.copySelectedBtn.addEventListener("click", async () => {
+      if (!state.selectedDate) {
+        showCopyToast("달력에서 확인할 날짜를 먼저 선택해 주세요.", true);
+        return;
+      }
       await copyText(buildSelectedDateCopyText(), "선택 날짜 내용을 복사했어요. 메신저에 바로 붙여넣을 수 있어요.");
     });
   }
@@ -391,14 +431,50 @@ async function handleSchoolSearch(fallbackKeyword = "") {
     els.schoolResults.innerHTML = `<div class="empty result-empty">학교명을 입력하거나 아래 빠른 선택 버튼을 눌러주세요.</div>`;
     return;
   }
+
+  const searchSequence = ++schoolSearchSequence;
+  schoolSearchController?.abort();
+  window.clearTimeout(schoolSearchSlowTimer);
+  window.clearTimeout(schoolSearchTimeoutTimer);
+
+  const controller = new AbortController();
+  schoolSearchController = controller;
   els.schoolResults.innerHTML = `<div class="loading">${renderLoadingText("학교를 검색하고 있어요")}</div>`;
+
+  schoolSearchSlowTimer = window.setTimeout(() => {
+    if (searchSequence !== schoolSearchSequence || controller.signal.aborted) return;
+    els.schoolResults.innerHTML = `
+      <div class="loading school-search-state">
+        <div>
+          <strong>검색이 평소보다 오래 걸리고 있어요.</strong>
+          <p>잠시 더 기다리거나 다시 검색해 주세요.</p>
+        </div>
+        <button type="button" class="school-search-retry-btn" data-school-search-action="retry">다시 검색</button>
+      </div>`;
+  }, 7000);
+
+  schoolSearchTimeoutTimer = window.setTimeout(() => {
+    if (searchSequence === schoolSearchSequence && !controller.signal.aborted) controller.abort();
+  }, 30000);
+
   try {
-    const schools = await fetchSchools(keyword, els.officeCode.value);
+    const schools = await fetchSchools(keyword, els.officeCode.value, controller.signal);
+    if (searchSequence !== schoolSearchSequence) return;
     state.schools = schools;
     renderSchoolResults(schools);
   } catch (error) {
+    if (searchSequence !== schoolSearchSequence) return;
     state.schools = [];
-    renderSchoolResults([], "학교 검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
+    const message = error?.name === "AbortError"
+      ? "학교 검색이 오래 걸려 중단했어요. 다시 검색해 주세요."
+      : "학교 정보를 불러오지 못했어요. 잠시 후 다시 검색해 주세요.";
+    renderSchoolResults([], message);
+  } finally {
+    if (searchSequence === schoolSearchSequence) {
+      window.clearTimeout(schoolSearchSlowTimer);
+      window.clearTimeout(schoolSearchTimeoutTimer);
+      if (schoolSearchController === controller) schoolSearchController = null;
+    }
   }
 }
 
@@ -415,9 +491,9 @@ function getNeisContext() {
   };
 }
 
-async function fetchSchools(keyword, officeCode) {
+async function fetchSchools(keyword, officeCode, signal) {
   const params = new URLSearchParams({ keyword, officeCode });
-  const response = await fetch(`${API_CONFIG.baseUrl}/api/schools?${params.toString()}`);
+  const response = await fetch(`${API_CONFIG.baseUrl}/api/schools?${params.toString()}`, { signal });
   if (!response.ok) throw new Error("학교 검색 실패");
   const data = await response.json();
   return data.schools || [];
@@ -620,8 +696,16 @@ async function loadMonthData() {
   }
 
   updateTodaySnapshot();
-  updateDataLoading(loadingToken, "거의 다 불러왔어요", "오늘 시간표를 확인하고 있어요.");
-  await loadDayData();
+  if (state.selectedDate) {
+    updateDataLoading(loadingToken, "거의 다 불러왔어요", "선택 날짜 시간표를 확인하고 있어요.");
+    await loadDayData();
+  } else {
+    state.meal = null;
+    state.timetable = [];
+    state.timetableStatus = "idle";
+    state.timetableMessage = "확인할 날짜를 선택해 주세요.";
+    state.timetableNotice = "";
+  }
   if (isCurrentLoad()) {
     renderTimetableDetail();
     renderTodaySummary();
@@ -629,6 +713,15 @@ async function loadMonthData() {
   finishDataLoading(loadingToken);
 }
 async function loadDayData() {
+  if (!state.selectedDate) {
+    state.meal = null;
+    state.timetable = [];
+    state.timetableStatus = "idle";
+    state.timetableMessage = "확인할 날짜를 선택해 주세요.";
+    state.timetableNotice = "";
+    return;
+  }
+
   state.meal = state.mealsByDate[state.selectedDate] || null;
   state.classSwitcherOpen = false;
   restoreTimetableFromCache();
@@ -656,6 +749,14 @@ async function loadTimetable({ forceRefresh = false } = {}) {
     return;
   }
 
+  if (!state.selectedDate) {
+    state.timetableStatus = "idle";
+    state.timetableMessage = "확인할 날짜를 선택해 주세요.";
+    state.timetableNotice = "";
+    state.timetable = [];
+    return;
+  }
+
   const apiName = getTimetableApiName(state.selectedSchool);
   if (!apiName) {
     state.timetableStatus = "unsupported";
@@ -671,13 +772,13 @@ async function loadTimetable({ forceRefresh = false } = {}) {
 
   try {
     state.timetable = await fetchTimetable({ forceRefresh });
-    state.timetableStatus = "success";
+    state.timetableStatus = state.timetable.length ? "success" : "empty";
     state.timetableMessage = state.timetable.length
       ? ""
-      : "이 날짜의 시간표 정보가 없습니다. 학년·반·학기를 확인해 주세요.";
+      : "이 날짜에 등록된 시간표가 없어요. 학년·반·학기를 확인해 주세요.";
 
     state.timetableNotice = cacheMeta.timetable
-      ? "최신 조회에 실패해 이전에 저장된 시간표를 보여드려요."
+      ? "최신 조회에 실패해 이전에 저장된 시간표 조회 결과를 보여드려요."
       : "";
     if (state.selectedDate === formatDateKey(new Date())) {
       updateTodaySnapshot();
@@ -726,7 +827,7 @@ function renderSelectedSchool() {
   els.selectedSchoolMeta.textContent = `${grade}학년 ${className}반 · ${semester}학기 · ${state.selectedSchool.region || ""} · ${state.selectedSchool.schoolType || "학교"}`;
   if (els.reloadTimetableBtn) {
     els.reloadTimetableBtn.hidden = false;
-    els.reloadTimetableBtn.disabled = state.timetableStatus === "loading";
+    els.reloadTimetableBtn.disabled = state.timetableStatus === "loading" || !state.selectedDate;
     els.reloadTimetableBtn.textContent = state.timetableStatus === "loading" ? "시간표 불러오는 중" : "시간표 새로고침";
   }
   if (els.searchTitle) els.searchTitle.textContent = "우리학교를 설정해 주세요";
@@ -852,11 +953,18 @@ function renderTodaySummary() {
     todayTimetableTitle.innerHTML = buildSummaryTitle("시간표", "🕘", badge);
   }
 
-  const todayTimetable = getTimetableCacheWithOptions(todayKey, todayGrade, todayClassName, todaySemester);
+  const todayTimetableEntry = getTimetableCacheEntryWithOptions(todayKey, todayGrade, todayClassName, todaySemester);
+  const todayTimetable = todayTimetableEntry.data;
   if (todayTimetable.length) {
     els.todayTimetableSummary.innerHTML = `<ol class="today-timetable-list">${todayTimetable.slice(0, 7).map((item) => `<li><b>${escapeHtml(item.period)}교시</b> ${escapeHtml(item.subject || "-")}</li>`).join("")}</ol>${todayTimetable.length > 7 ? `<p class="today-more">외 ${todayTimetable.length - 7}교시</p>` : ""}`;
+  } else if (state.selectedDate === todayKey && state.timetableStatus === "loading") {
+    els.todayTimetableSummary.innerHTML = `<p class="empty">${renderLoadingText("오늘 시간표를 불러오는 중입니다")}</p>`;
+  } else if (state.selectedDate === todayKey && state.timetableStatus === "error") {
+    els.todayTimetableSummary.innerHTML = `<p class="empty">시간표를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>`;
+  } else if (todayTimetableEntry.hit) {
+    els.todayTimetableSummary.innerHTML = `<p class="empty">오늘 등록된 시간표가 없어요. 학년·반·학기를 확인해 주세요.</p>`;
   } else {
-    els.todayTimetableSummary.innerHTML = `<p class="empty">학교 선택 후 오늘 시간표가 자동 적용됩니다. 필요하면 현재 선택한 학교 카드에서 다시 불러올 수 있어요.</p>`;
+    els.todayTimetableSummary.innerHTML = `<p class="empty">오늘 시간표를 아직 불러오지 못했어요. 다시 확인해 주세요.</p>`;
   }
 }
 
@@ -869,12 +977,19 @@ function renderDetails() {
 
 function renderSelectedCopyStrip() {
   if (!els.selectedCopyDate) return;
-  els.selectedCopyDate.textContent = state.selectedDate ? formatKoreanDate(state.selectedDate) : "날짜를 선택해 주세요.";
+  const hasSelectedDate = Boolean(state.selectedDate);
+  els.selectedCopyDate.textContent = hasSelectedDate ? formatKoreanDate(state.selectedDate) : "날짜를 선택해 주세요.";
+  if (els.copySelectedBtn) els.copySelectedBtn.disabled = !hasSelectedDate;
+  if (els.shareSelectedBtn) els.shareSelectedBtn.disabled = !hasSelectedDate;
 }
 
 function renderScheduleDetail() {
   if (!state.selectedSchool) {
     els.scheduleDetail.innerHTML = `<p class="empty">학교를 먼저 선택해 주세요.</p>`;
+    return;
+  }
+  if (!state.selectedDate) {
+    els.scheduleDetail.innerHTML = `<p class="empty">확인할 날짜를 선택해 주세요.</p>`;
     return;
   }
   if (state.scheduleStatus === "loading") {
@@ -894,6 +1009,10 @@ function renderScheduleDetail() {
 function renderMealDetail() {
   if (!state.selectedSchool) {
     els.mealDetail.innerHTML = `<p class="empty">학교를 먼저 선택해 주세요.</p>`;
+    return;
+  }
+  if (!state.selectedDate) {
+    els.mealDetail.innerHTML = `<p class="empty">확인할 날짜를 선택해 주세요.</p>`;
     return;
   }
   if (state.mealStatus === "loading") {
@@ -922,6 +1041,10 @@ function renderMealDetail() {
 function renderTimetableDetail() {
   if (!state.selectedSchool) {
     els.timetableDetail.innerHTML = `<p class="empty">학교를 먼저 선택해 주세요.</p>`;
+    return;
+  }
+  if (!state.selectedDate) {
+    els.timetableDetail.innerHTML = `<p class="empty">확인할 날짜를 선택해 주세요.</p>`;
     return;
   }
 
@@ -995,7 +1118,10 @@ function renderView() {
 
 function renderSchoolResults(schools, notice = "") {
   if (!schools.length) {
-    els.schoolResults.innerHTML = `<div class="empty result-empty">검색 결과가 없습니다. 학교명을 조금 줄여서 다시 검색해 주세요.</div>`;
+    state.schools = [];
+    els.schoolResults.innerHTML = notice
+      ? `<div class="error school-search-state"><span>${escapeHtml(notice)}</span><button type="button" class="school-search-retry-btn" data-school-search-action="retry">다시 검색</button></div>`
+      : `<div class="empty result-empty">검색 결과가 없습니다. 학교명을 조금 줄여서 다시 검색해 주세요.</div>`;
     return;
   }
 
@@ -1101,7 +1227,7 @@ function getScheduleMarkerLabel(items) {
 
 function queueTimetableAutoSync(delay = 450) {
   window.clearTimeout(state.timetableAutoTimer);
-  if (!state.selectedSchool) return;
+  if (!state.selectedSchool || !state.selectedDate) return;
   state.timetableAutoTimer = window.setTimeout(async () => {
     await loadTimetable();
     renderAll();
@@ -1176,6 +1302,10 @@ async function writeToClipboard(text) {
 async function shareCalendarLink(mode = "month") {
   if (!state.selectedSchool) {
     showCopyToast("학교를 먼저 선택해 주세요.", true);
+    return;
+  }
+  if (mode === "date" && !state.selectedDate) {
+    showCopyToast("달력에서 공유할 날짜를 먼저 선택해 주세요.", true);
     return;
   }
 
@@ -1286,7 +1416,7 @@ function buildTodayCopyText() {
 }
 
 function buildSelectedDateCopyText() {
-  if (!state.selectedSchool) return "";
+  if (!state.selectedSchool || !state.selectedDate) return "";
   const selectedSchedules = state.schedules.filter((item) => item.date === state.selectedDate);
   const selectedMeal = state.mealsByDate[state.selectedDate] || state.meal || null;
   const selectedTimetable = getTimetableCache(state.selectedDate);
@@ -1393,7 +1523,7 @@ function applyInitialCalendarState(sharedState = {}) {
   if (sharedState.month) {
     const [year, month] = sharedState.month.split("-").map(Number);
     state.currentDate = new Date(year, month - 1, 1);
-    state.selectedDate = `${sharedState.month}-01`;
+    state.selectedDate = "";
     return;
   }
 
@@ -1528,11 +1658,18 @@ function getTimetableCache(dateKey = state.selectedDate) {
   );
 }
 
-function getTimetableCacheWithOptions(dateKey, grade, className, semester) {
+function getTimetableCacheEntryWithOptions(dateKey, grade, className, semester) {
   const key = getTimetableCacheKeyWithOptions(dateKey, grade, className, semester);
-  if (!key) return [];
+  if (!key) return { hit: false, stale: false, data: [] };
   const cached = NeisCache.get(key);
-  return cached.hit && Array.isArray(cached.data) ? cached.data : [];
+  return {
+    ...cached,
+    data: cached.hit && Array.isArray(cached.data) ? cached.data : []
+  };
+}
+
+function getTimetableCacheWithOptions(dateKey, grade, className, semester) {
+  return getTimetableCacheEntryWithOptions(dateKey, grade, className, semester).data;
 }
 
 function hasTimetableCache(dateKey) {
@@ -1540,13 +1677,21 @@ function hasTimetableCache(dateKey) {
 }
 
 function restoreTimetableFromCache() {
+  if (!state.selectedDate) {
+    state.timetable = [];
+    state.timetableStatus = "idle";
+    state.timetableMessage = "확인할 날짜를 선택해 주세요.";
+    state.timetableNotice = "";
+    return;
+  }
+
   const key = getTimetableCacheKey(state.selectedDate);
   const cachedEntry = key ? NeisCache.get(key) : { hit: false };
   const cached = cachedEntry.hit && Array.isArray(cachedEntry.data) ? cachedEntry.data : [];
   state.timetable = cached;
-  state.timetableStatus = cachedEntry.hit ? "success" : "idle";
+  state.timetableStatus = cachedEntry.hit ? (cached.length ? "success" : "empty") : "idle";
   state.timetableMessage = cachedEntry.hit && !cached.length
-    ? "이 날짜의 시간표 정보가 없습니다. 학년·반·학기를 확인해 주세요."
+    ? "이 날짜에 등록된 시간표가 없어요. 학년·반·학기를 확인해 주세요."
     : "";
   state.timetableNotice = cached.length ? "오늘 저장된 시간표 조회 결과를 보여드려요." : "";
 }
