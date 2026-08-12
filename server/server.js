@@ -110,15 +110,13 @@ app.get("/api/meals", async (req, res) => {
 
 app.get("/api/timetable", async (req, res) => {
   try {
-    const { officeCode, schoolCode, schoolType = "", year, semester, grade, className, classNm, date } = req.query;
+    const { officeCode, schoolCode, schoolType = "", grade, className, classNm, date } = req.query;
     const endpoint = getTimetableEndpoint(schoolType);
     if (!endpoint) return res.status(400).json({ error: "현재 이 학교급의 시간표 조회는 지원 준비 중입니다." });
 
     const data = await neisFetch(endpoint, {
       ATPT_OFCDC_SC_CODE: officeCode,
       SD_SCHUL_CODE: schoolCode,
-      AY: year,
-      SEM: semester,
       GRADE: grade,
       CLASS_NM: className || classNm,
       ALL_TI_YMD: date

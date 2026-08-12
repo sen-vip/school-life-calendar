@@ -1,5 +1,5 @@
 // ============================================================
-// 오늘학교 v1.5.7 설정·중복 UI 다이어트 (1·2차 로직 유지)
+// 오늘학교 v1.5.8 학기 설정 제거 · 날짜 기준 시간표 조회
 // NEIS 공통 당일 캐시 + 순차 표시 + 지연 로딩 안내
 // ============================================================
 
@@ -10,9 +10,9 @@ const API_CONFIG = {
 const STORAGE_KEY = "schoolLifeCalendar.selectedSchool";
 const TIMETABLE_STORAGE_KEYS = {
   grade: "schoolLifeTimetableGrade",
-  className: "schoolLifeTimetableClass",
-  semester: "schoolLifeTimetableSemester"
+  className: "schoolLifeTimetableClass"
 };
+const LEGACY_TIMETABLE_SEMESTER_KEY = "schoolLifeTimetableSemester";
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const PUBLIC_HOLIDAY_NAME_PATTERN = /^(?:신정|설날(?:\s*연휴)?|삼일절|3[·.]1절|어린이날|부처님오신날|석가탄신일|현충일|제헌절|광복절|추석(?:\s*연휴)?|개천절|한글날|성탄절|크리스마스|노동절|근로자의\s*날)(?:\s*\([^)]*\))?$/;
 const PUBLIC_HOLIDAY_TEXT_PATTERN = /(?:대체공휴일|임시공휴일|공휴일|관공서의\s*공휴일)/;
@@ -100,7 +100,6 @@ const els = {
   timetableDetail: document.querySelector("#timetableDetail"),
   gradeInput: document.querySelector("#gradeInput"),
   classInput: document.querySelector("#classInput"),
-  semesterInput: document.querySelector("#semesterInput"),
   reloadTimetableBtn: document.querySelector("#reloadTimetableBtn"),
   dataLoadingBar: document.querySelector("#dataLoadingBar"),
   dataLoadingTitle: document.querySelector("#dataLoadingTitle"),
@@ -296,7 +295,6 @@ function bindEvents() {
     els.schoolKeyword.value = "";
     els.gradeInput.value = "1";
     els.classInput.value = "1";
-    els.semesterInput.value = getTodaySemester(state.selectedDate);
     state.activeTab = "settings";
     renderAll();
     showCopyToast("저장된 학교와 학년·반을 초기화했어요.");
@@ -347,7 +345,7 @@ function bindEvents() {
     });
   });
 
-  [els.gradeInput, els.classInput, els.semesterInput].forEach((input) => {
+  [els.gradeInput, els.classInput].forEach((input) => {
     input.addEventListener("input", () => {
       saveTimetablePreferences();
       state.classSwitcherOpen = false;
@@ -487,8 +485,7 @@ function getNeisContext() {
     officeCode: state.selectedSchool?.officeCode || "",
     schoolName: state.selectedSchool?.schoolName || "",
     grade: els.gradeInput?.value || "1",
-    className: els.classInput?.value || "1",
-    semester: els.semesterInput?.value || "1"
+    className: els.classInput?.value || "1"
   };
 }
 
@@ -577,7 +574,6 @@ async function fetchTimetable({ forceRefresh = false } = {}) {
     context.schoolCode,
     context.grade,
     context.className,
-    context.semester,
     dateKey
   );
 
@@ -586,8 +582,6 @@ async function fetchTimetable({ forceRefresh = false } = {}) {
       officeCode: context.officeCode,
       schoolCode: context.schoolCode,
       schoolType: state.selectedSchool.schoolType || state.selectedSchool.schoolName || "",
-      year: String(new Date(`${dateKey}T00:00:00`).getFullYear()),
-      semester: context.semester,
       grade: context.grade,
       className: context.className,
       classNm: context.className,
@@ -776,7 +770,7 @@ async function loadTimetable({ forceRefresh = false } = {}) {
     state.timetableStatus = state.timetable.length ? "success" : "empty";
     state.timetableMessage = state.timetable.length
       ? ""
-      : "이 날짜에 등록된 시간표가 없어요. 학년·반·학기를 확인해 주세요.";
+      : "이 날짜에 등록된 시간표가 없어요. 학년·반을 확인해 주세요.";
 
     state.timetableNotice = cacheMeta.timetable
       ? "최신 조회에 실패해 이전에 저장된 시간표 조회 결과를 보여드려요."
@@ -825,14 +819,13 @@ function renderSelectedSchool() {
   els.selectedSchoolName.textContent = state.selectedSchool.schoolName;
   const grade = els.gradeInput?.value || "1";
   const className = els.classInput?.value || "1";
-  const semester = els.semesterInput?.value || "1";
-  els.selectedSchoolMeta.textContent = `${grade}학년 ${className}반 · ${semester}학기 · ${state.selectedSchool.region || ""} · ${state.selectedSchool.schoolType || "학교"}`;
+  els.selectedSchoolMeta.textContent = `${grade}학년 ${className}반 · ${state.selectedSchool.region || ""} · ${state.selectedSchool.schoolType || "학교"}`;
   if (els.reloadTimetableBtn) {
     els.reloadTimetableBtn.hidden = false;
     els.reloadTimetableBtn.disabled = state.timetableStatus === "loading" || !state.selectedDate;
     els.reloadTimetableBtn.textContent = state.timetableStatus === "loading" ? "시간표 불러오는 중" : "시간표 새로고침";
   }
-  if (els.classSettingHelper) els.classSettingHelper.textContent = "시간표를 확인할 학년·반·학기예요.";
+  if (els.classSettingHelper) els.classSettingHelper.textContent = "시간표를 확인할 학년·반이에요.";
   if (els.searchTitle) els.searchTitle.textContent = "우리학교 설정";
 }
 
@@ -949,14 +942,13 @@ function renderTodaySummary() {
 
   const todayGrade = els.gradeInput.value || "1";
   const todayClassName = els.classInput.value || "1";
-  const todaySemester = els.semesterInput.value || getTodaySemester(todayKey);
   const todayTimetableTitle = document.querySelector("#todayTimetableTitle");
   if (todayTimetableTitle) {
     const badge = ` <span class="title-badge class-badge">${escapeHtml(todayGrade)}-${escapeHtml(todayClassName)}</span>`;
     todayTimetableTitle.innerHTML = buildSummaryTitle("시간표", "🕘", badge);
   }
 
-  const todayTimetableEntry = getTimetableCacheEntryWithOptions(todayKey, todayGrade, todayClassName, todaySemester);
+  const todayTimetableEntry = getTimetableCacheEntryWithOptions(todayKey, todayGrade, todayClassName);
   const todayTimetable = todayTimetableEntry.data;
   if (todayTimetable.length) {
     els.todayTimetableSummary.innerHTML = `<ol class="today-timetable-list">${todayTimetable.slice(0, 7).map((item) => `<li><b>${escapeHtml(item.period)}교시</b> ${escapeHtml(item.subject || "-")}</li>`).join("")}</ol>${todayTimetable.length > 7 ? `<p class="today-more">외 ${todayTimetable.length - 7}교시</p>` : ""}`;
@@ -965,7 +957,7 @@ function renderTodaySummary() {
   } else if (state.selectedDate === todayKey && state.timetableStatus === "error") {
     els.todayTimetableSummary.innerHTML = `<p class="empty">시간표를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>`;
   } else if (todayTimetableEntry.hit) {
-    els.todayTimetableSummary.innerHTML = `<p class="empty">오늘 등록된 시간표가 없어요. 학년·반·학기를 확인해 주세요.</p>`;
+    els.todayTimetableSummary.innerHTML = `<p class="empty">오늘 등록된 시간표가 없어요. 학년·반을 확인해 주세요.</p>`;
   } else {
     els.todayTimetableSummary.innerHTML = `<p class="empty">오늘 시간표를 아직 불러오지 못했어요. 다시 확인해 주세요.</p>`;
   }
@@ -1053,7 +1045,6 @@ function renderTimetableDetail() {
 
   const grade = els.gradeInput.value || "1";
   const className = els.classInput.value || "1";
-  const semester = els.semesterInput.value || "1";
   const apiName = getTimetableApiName(state.selectedSchool);
   const notice = state.timetableNotice
     ? `<p class="detail-notice">${escapeHtml(state.timetableNotice)}</p>`
@@ -1076,12 +1067,6 @@ function renderTimetableDetail() {
     ? `<div class="quick-class-editor" aria-label="시간표 조회 기준 변경">
         <label>학년 <input id="quickGradeInput" type="number" min="1" max="6" value="${escapeHtml(grade)}" /></label>
         <label>반 <input id="quickClassInput" type="number" min="1" max="20" value="${escapeHtml(className)}" /></label>
-        <label>학기
-          <select id="quickSemesterInput">
-            <option value="1" ${semester === "1" ? "selected" : ""}>1학기</option>
-            <option value="2" ${semester === "2" ? "selected" : ""}>2학기</option>
-          </select>
-        </label>
         <div class="quick-class-actions">
           <button type="button" class="quick-apply-btn" data-timetable-action="apply-class">적용</button>
           <button type="button" class="quick-cancel-btn" data-timetable-action="cancel-class">취소</button>
@@ -1091,7 +1076,7 @@ function renderTimetableDetail() {
 
   els.timetableDetail.innerHTML = `
     <div class="timetable-detail-head">
-      <strong>${escapeHtml(grade)}학년 ${escapeHtml(className)}반 · ${escapeHtml(semester)}학기</strong>
+      <strong>${escapeHtml(grade)}학년 ${escapeHtml(className)}반</strong>
       <button type="button" class="quick-switch-btn" data-timetable-action="toggle-class">${state.classSwitcherOpen ? "닫기" : "반 바꾸기"}</button>
     </div>
     ${notice}
@@ -1254,11 +1239,8 @@ async function handleTimetableDetailClick(event) {
   if (action === "apply-class") {
     const quickGrade = document.querySelector("#quickGradeInput")?.value || els.gradeInput.value || "1";
     const quickClass = document.querySelector("#quickClassInput")?.value || els.classInput.value || "1";
-    const quickSemester = document.querySelector("#quickSemesterInput")?.value || els.semesterInput.value || "1";
-
     els.gradeInput.value = quickGrade;
     els.classInput.value = quickClass;
-    els.semesterInput.value = quickSemester;
     saveTimetablePreferences();
     state.classSwitcherOpen = false;
     await loadTimetable();
@@ -1346,7 +1328,6 @@ function buildShareUrl(mode = "month") {
   if (state.selectedSchool.region) params.set("region", state.selectedSchool.region);
   params.set("grade", els.gradeInput.value || "1");
   params.set("classNm", els.classInput.value || "1");
-  params.set("semester", els.semesterInput.value || "1");
 
   if (mode === "date" && state.selectedDate) {
     params.set("date", state.selectedDate);
@@ -1401,10 +1382,9 @@ function buildTodayCopyText() {
   const todayKey = formatDateKey(new Date());
   const grade = els.gradeInput.value || "1";
   const className = els.classInput.value || "1";
-  const semester = getTodaySemester(todayKey);
   const todaySchedules = state.todaySchedules || [];
   const todayMeal = state.todayMeal;
-  const todayTimetable = getTimetableCacheWithOptions(todayKey, grade, className, semester);
+  const todayTimetable = getTimetableCacheWithOptions(todayKey, grade, className);
 
   return buildDayCopyText({
     dateKey: todayKey,
@@ -1499,7 +1479,6 @@ function getSharedStateFromUrl() {
     school,
     grade: normalizeNumberParam(params.get("grade"), 1, 6),
     className: normalizeNumberParam(params.get("classNm") || params.get("className"), 1, 30),
-    semester: ["1", "2"].includes(params.get("semester")) ? params.get("semester") : "",
     month: normalizeMonthParam(params.get("month")),
     date: normalizeDateParam(params.get("date"))
   };
@@ -1508,8 +1487,7 @@ function getSharedStateFromUrl() {
 function applySharedTimetablePreferences(sharedState = {}) {
   if (sharedState.grade) els.gradeInput.value = sharedState.grade;
   if (sharedState.className) els.classInput.value = sharedState.className;
-  if (sharedState.semester) els.semesterInput.value = sharedState.semester;
-  if (sharedState.grade || sharedState.className || sharedState.semester) saveTimetablePreferences();
+  if (sharedState.grade || sharedState.className) saveTimetablePreferences();
 }
 
 function applyInitialCalendarState(sharedState = {}) {
@@ -1616,24 +1594,23 @@ function loadSelectedSchool() {
 function clearSavedPreferences() {
   localStorage.removeItem(STORAGE_KEY);
   Object.values(TIMETABLE_STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  localStorage.removeItem(LEGACY_TIMETABLE_SEMESTER_KEY);
 }
 
 function getTimetableCacheKey(dateKey = state.selectedDate) {
   return getTimetableCacheKeyWithOptions(
     dateKey,
     els.gradeInput.value || "1",
-    els.classInput.value || "1",
-    els.semesterInput.value || "1"
+    els.classInput.value || "1"
   );
 }
 
-function getTimetableCacheKeyWithOptions(dateKey, grade, className, semester) {
+function getTimetableCacheKeyWithOptions(dateKey, grade, className) {
   if (!state.selectedSchool || !dateKey) return "";
   return NeisCache.keys.timetable(
     state.selectedSchool.schoolCode || "unknown",
     grade || "1",
     className || "1",
-    semester || "1",
     dateKey
   );
 }
@@ -1653,13 +1630,12 @@ function getTimetableCache(dateKey = state.selectedDate) {
   return getTimetableCacheWithOptions(
     dateKey,
     els.gradeInput.value || "1",
-    els.classInput.value || "1",
-    els.semesterInput.value || "1"
+    els.classInput.value || "1"
   );
 }
 
-function getTimetableCacheEntryWithOptions(dateKey, grade, className, semester) {
-  const key = getTimetableCacheKeyWithOptions(dateKey, grade, className, semester);
+function getTimetableCacheEntryWithOptions(dateKey, grade, className) {
+  const key = getTimetableCacheKeyWithOptions(dateKey, grade, className);
   if (!key) return { hit: false, stale: false, data: [] };
   const cached = NeisCache.get(key);
   return {
@@ -1668,8 +1644,8 @@ function getTimetableCacheEntryWithOptions(dateKey, grade, className, semester) 
   };
 }
 
-function getTimetableCacheWithOptions(dateKey, grade, className, semester) {
-  return getTimetableCacheEntryWithOptions(dateKey, grade, className, semester).data;
+function getTimetableCacheWithOptions(dateKey, grade, className) {
+  return getTimetableCacheEntryWithOptions(dateKey, grade, className).data;
 }
 
 function hasTimetableCache(dateKey) {
@@ -1691,45 +1667,22 @@ function restoreTimetableFromCache() {
   state.timetable = cached;
   state.timetableStatus = cachedEntry.hit ? (cached.length ? "success" : "empty") : "idle";
   state.timetableMessage = cachedEntry.hit && !cached.length
-    ? "이 날짜에 등록된 시간표가 없어요. 학년·반·학기를 확인해 주세요."
+    ? "이 날짜에 등록된 시간표가 없어요. 학년·반을 확인해 주세요."
     : "";
   state.timetableNotice = cached.length ? "오늘 저장된 시간표 조회 결과를 보여드려요." : "";
-}
-
-function getTodaySemester(dateKey = formatDateKey(new Date())) {
-  const date = new Date(`${dateKey}T00:00:00`);
-  const month = date.getMonth() + 1;
-
-  if (month >= 3 && month <= 6) return "1";
-  if (month >= 9 || month <= 2) return "2";
-
-  // 7~8월은 여름방학 전/후가 학교마다 달라서 학사일정 기준으로 판단합니다.
-  const schedules = state.schedules || [];
-  const hasSecondSemesterStart = schedules.some((item) => {
-    const text = `${item.title || ""} ${item.content || ""}`;
-    return item.date <= dateKey && /(2학기|개학|개학식|2학기 시작)/.test(text);
-  });
-  if (hasSecondSemesterStart) return "2";
-
-  const savedSemester = localStorage.getItem(TIMETABLE_STORAGE_KEYS.semester);
-  if (savedSemester === "1" || savedSemester === "2") return savedSemester;
-
-  return "1";
 }
 
 function saveTimetablePreferences() {
   localStorage.setItem(TIMETABLE_STORAGE_KEYS.grade, String(els.gradeInput.value || "1"));
   localStorage.setItem(TIMETABLE_STORAGE_KEYS.className, String(els.classInput.value || "1"));
-  localStorage.setItem(TIMETABLE_STORAGE_KEYS.semester, String(els.semesterInput.value || "1"));
 }
 
 function loadTimetablePreferences() {
+  localStorage.removeItem(LEGACY_TIMETABLE_SEMESTER_KEY);
   const savedGrade = localStorage.getItem(TIMETABLE_STORAGE_KEYS.grade);
   const savedClass = localStorage.getItem(TIMETABLE_STORAGE_KEYS.className);
-  const savedSemester = localStorage.getItem(TIMETABLE_STORAGE_KEYS.semester);
   if (savedGrade) els.gradeInput.value = savedGrade;
   if (savedClass) els.classInput.value = savedClass;
-  if (savedSemester) els.semesterInput.value = savedSemester;
 }
 
 function cleanTextLines(value = "") {

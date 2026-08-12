@@ -169,8 +169,8 @@
     mealMonth(schoolCode, monthKey) {
       return `meal-month:${schoolCode}:${monthKey}`;
     },
-    timetable(schoolCode, grade, className, semester, dateKey) {
-      return `timetable:${schoolCode}:${grade}:${className}:${semester}:${dateKey}`;
+    timetable(schoolCode, grade, className, dateKey) {
+      return `timetable-v2:${schoolCode}:${grade}:${className}:${dateKey}`;
     }
   };
 
