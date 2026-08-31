@@ -1,5 +1,5 @@
 // ============================================================
-// 오늘학교 v1.6.1 오늘 우선 로딩 · 내일 백그라운드 프리뷰 · 검색 캐시
+// 오늘학교 v1.6.2 내일 시간표 미리보기 · 오늘 우선 로딩 · 검색 캐시
 // NEIS 공통 캐시 + 오늘 정보 우선 표시 + 프록시 워밍업
 // ============================================================
 
@@ -60,8 +60,10 @@ const state = {
   todayMealStatus: "idle",
   tomorrowSchedules: [],
   tomorrowMeal: null,
+  tomorrowTimetable: [],
   tomorrowScheduleStatus: "idle",
   tomorrowMealStatus: "idle",
+  tomorrowTimetableStatus: "idle",
   timetable: [],
   timetableStatus: "idle",
   timetableMessage: "",
@@ -101,6 +103,7 @@ const els = {
   tomorrowMealTitle: document.querySelector("#tomorrowMealTitle"),
   tomorrowMealSummary: document.querySelector("#tomorrowMealSummary"),
   tomorrowScheduleSummary: document.querySelector("#tomorrowScheduleSummary"),
+  tomorrowTimetableSummary: document.querySelector("#tomorrowTimetableSummary"),
   helpBtn: document.querySelector("#helpBtn"),
   helpDialog: document.querySelector("#helpDialog"),
   helpCloseBtn: document.querySelector("#helpCloseBtn"),
@@ -364,8 +367,10 @@ function bindEvents() {
     state.todayMealStatus = "idle";
     state.tomorrowSchedules = [];
     state.tomorrowMeal = null;
+    state.tomorrowTimetable = [];
     state.tomorrowScheduleStatus = "idle";
     state.tomorrowMealStatus = "idle";
+    state.tomorrowTimetableStatus = "idle";
     state.timetable = [];
     state.timetableStatus = "idle";
     state.timetableMessage = "";
@@ -692,6 +697,43 @@ async function fetchTimetable({ forceRefresh = false } = {}) {
   return Array.isArray(result.data) ? result.data : [];
 }
 
+async function fetchTimetableForDateKey(dateKey, { forceRefresh = false } = {}) {
+  if (!state.selectedSchool || !dateKey) return { data: [], stale: false };
+  const apiName = getTimetableApiName(state.selectedSchool);
+  if (!apiName) throw new Error("지원하지 않는 학교급");
+
+  const context = getNeisContext();
+  const cacheKey = NeisCache.keys.timetable(
+    context.schoolCode,
+    context.grade,
+    context.className,
+    dateKey
+  );
+
+  const result = await NeisCache.getOrFetch(cacheKey, async () => {
+    const params = new URLSearchParams({
+      officeCode: context.officeCode,
+      schoolCode: context.schoolCode,
+      schoolType: state.selectedSchool.schoolType || state.selectedSchool.schoolName || "",
+      grade: context.grade,
+      className: context.className,
+      classNm: context.className,
+      date: compactDate(dateKey)
+    });
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/timetable?${params.toString()}`);
+    if (!response.ok) throw new Error("시간표 조회 실패");
+    const data = await response.json();
+    return (data.timetable || [])
+      .map((item) => ({ ...normalizeTimetable(item), date: item.date || item.ALL_TI_YMD || dateKey }))
+      .sort((a, b) => Number(a.period) - Number(b.period));
+  }, { forceRefresh });
+
+  return {
+    data: Array.isArray(result.data) ? result.data : [],
+    stale: Boolean(result.stale)
+  };
+}
+
 async function fetchSchedulesForDateKey(dateKey, { forceRefresh = false } = {}) {
   if (!state.selectedSchool || !dateKey) return { data: [], stale: false };
   const context = getNeisContext();
@@ -769,8 +811,10 @@ async function loadTomorrowPreview() {
   if (!state.selectedSchool) {
     state.tomorrowSchedules = [];
     state.tomorrowMeal = null;
+    state.tomorrowTimetable = [];
     state.tomorrowScheduleStatus = "idle";
     state.tomorrowMealStatus = "idle";
+    state.tomorrowTimetableStatus = "idle";
     renderTomorrowPreview();
     return;
   }
@@ -782,34 +826,60 @@ async function loadTomorrowPreview() {
 
   state.tomorrowSchedules = [];
   state.tomorrowMeal = null;
+  state.tomorrowTimetable = [];
   state.tomorrowScheduleStatus = "loading";
   state.tomorrowMealStatus = "loading";
+  state.tomorrowTimetableStatus = "loading";
   renderTomorrowPreview();
 
-  const [scheduleResult, mealResult] = await Promise.allSettled([
-    fetchSchedulesForDateKey(tomorrowKey),
-    fetchMealForDateKey(tomorrowKey)
-  ]);
+  // 오늘 화면이 먼저 완성된 뒤, 내일의 세 정보를 서로 기다리지 않고 동시에 준비합니다.
+  // 각 정보는 도착하는 즉시 카드에 표시해, 시간표가 늦어도 급식·일정까지 기다리지 않게 합니다.
+  const scheduleTask = (async () => {
+    try {
+      const result = await fetchSchedulesForDateKey(tomorrowKey);
+      if (!isCurrent()) return;
+      state.tomorrowSchedules = result.data;
+      state.tomorrowScheduleStatus = result.stale ? "stale" : "success";
+    } catch (error) {
+      if (!isCurrent()) return;
+      state.tomorrowSchedules = [];
+      state.tomorrowScheduleStatus = "error";
+    } finally {
+      if (isCurrent()) renderTomorrowPreview();
+    }
+  })();
 
-  if (!isCurrent()) return;
+  const mealTask = (async () => {
+    try {
+      const result = await fetchMealForDateKey(tomorrowKey);
+      if (!isCurrent()) return;
+      state.tomorrowMeal = result.data;
+      state.tomorrowMealStatus = result.stale ? "stale" : "success";
+    } catch (error) {
+      if (!isCurrent()) return;
+      state.tomorrowMeal = null;
+      state.tomorrowMealStatus = "error";
+    } finally {
+      if (isCurrent()) renderTomorrowPreview();
+    }
+  })();
 
-  if (scheduleResult.status === "fulfilled") {
-    state.tomorrowSchedules = scheduleResult.value.data;
-    state.tomorrowScheduleStatus = scheduleResult.value.stale ? "stale" : "success";
-  } else {
-    state.tomorrowSchedules = [];
-    state.tomorrowScheduleStatus = "error";
-  }
+  const timetableTask = (async () => {
+    try {
+      const result = await fetchTimetableForDateKey(tomorrowKey);
+      if (!isCurrent()) return;
+      state.tomorrowTimetable = result.data;
+      state.tomorrowTimetableStatus = result.stale ? "stale" : "success";
+    } catch (error) {
+      if (!isCurrent()) return;
+      state.tomorrowTimetable = [];
+      state.tomorrowTimetableStatus = "error";
+    } finally {
+      if (isCurrent()) renderTomorrowPreview();
+    }
+  })();
 
-  if (mealResult.status === "fulfilled") {
-    state.tomorrowMeal = mealResult.value.data;
-    state.tomorrowMealStatus = mealResult.value.stale ? "stale" : "success";
-  } else {
-    state.tomorrowMeal = null;
-    state.tomorrowMealStatus = "error";
-  }
-
-  renderTomorrowPreview();
+  await Promise.allSettled([scheduleTask, mealTask, timetableTask]);
 }
 
 function getTimetableApiName(school) {
@@ -847,8 +917,10 @@ async function loadMonthData() {
   state.meal = null;
   state.tomorrowSchedules = [];
   state.tomorrowMeal = null;
+  state.tomorrowTimetable = [];
   state.tomorrowScheduleStatus = "loading";
   state.tomorrowMealStatus = "loading";
+  state.tomorrowTimetableStatus = "loading";
   state.scheduleStatus = "loading";
   state.scheduleMessage = "학사일정을 불러오는 중입니다.";
   state.mealStatus = "loading";
@@ -940,12 +1012,9 @@ async function loadMonthData() {
     renderTodaySummary();
     finishDataLoading(loadingToken);
 
-    // 달력용 월 급식과 내일 미리보기는 오늘 화면을 막지 않고 이어서 준비합니다.
-    void (async () => {
-      await runMealTask();
-      if (!isCurrentLoad()) return;
-      await loadTomorrowPreview();
-    })();
+    // 달력용 월 급식과 내일 미리보기는 오늘 화면을 막지 않고 서로 동시에 준비합니다.
+    // 내일 시간표 추가 때문에 내일 카드가 늦어지지 않도록 월 급식 완료를 기다리지 않습니다.
+    void Promise.allSettled([runMealTask(), loadTomorrowPreview()]);
     return;
   }
 
@@ -1251,6 +1320,9 @@ function renderTomorrowPreview() {
     if (els.tomorrowScheduleSummary) {
       els.tomorrowScheduleSummary.innerHTML = `<p class="empty">학교를 선택하면 내일 학사일정을 미리 볼 수 있어요.</p>`;
     }
+    if (els.tomorrowTimetableSummary) {
+      els.tomorrowTimetableSummary.innerHTML = `<p class="empty">학교와 학년·반을 설정하면 내일 시간표를 미리 볼 수 있어요.</p>`;
+    }
     return;
   }
 
@@ -1284,6 +1356,19 @@ function renderTomorrowPreview() {
       els.tomorrowScheduleSummary.innerHTML = `<ul>${schedules.slice(0, 4).map((item) => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul>${schedules.length > 4 ? `<p class="tomorrow-preview-note">외 ${schedules.length - 4}건</p>` : ""}${state.tomorrowScheduleStatus === "stale" ? `<p class="tomorrow-preview-note">저장된 조회 결과를 보여드려요.</p>` : ""}`;
     } else {
       els.tomorrowScheduleSummary.innerHTML = `<p class="empty">내일 등록된 학사일정이 없어요.</p>`;
+    }
+  }
+
+  const tomorrowTimetable = state.tomorrowTimetable || [];
+  if (els.tomorrowTimetableSummary) {
+    if (state.tomorrowTimetableStatus === "loading") {
+      els.tomorrowTimetableSummary.innerHTML = `<p class="empty">${renderLoadingText("내일 시간표를 확인하는 중입니다")}</p>`;
+    } else if (state.tomorrowTimetableStatus === "error") {
+      els.tomorrowTimetableSummary.innerHTML = `<p class="empty">내일 시간표를 불러오지 못했어요.</p>`;
+    } else if (tomorrowTimetable.length) {
+      els.tomorrowTimetableSummary.innerHTML = `<ol class="tomorrow-timetable-list">${tomorrowTimetable.slice(0, 8).map((item) => `<li><b>${escapeHtml(item.period)}교시</b><span>${escapeHtml(item.subject || "-")}</span></li>`).join("")}</ol>${tomorrowTimetable.length > 8 ? `<p class="tomorrow-preview-note">외 ${tomorrowTimetable.length - 8}교시</p>` : ""}${state.tomorrowTimetableStatus === "stale" ? `<p class="tomorrow-preview-note">저장된 조회 결과를 보여드려요.</p>` : ""}`;
+    } else {
+      els.tomorrowTimetableSummary.innerHTML = `<p class="empty">내일 등록된 시간표가 없어요. 학년·반을 확인해 주세요.</p>`;
     }
   }
 }

@@ -3112,3 +3112,64 @@ body.has-selected-school .class-setting-panel .setting-step {
     border-top: 1px solid var(--line);
   }
 }
+
+
+/* v1.6.2: 내일 시간표까지 한눈에 보는 2+1 카드 레이아웃 */
+.tomorrow-preview-item--timetable {
+  grid-column: 1 / -1;
+  min-height: 112px;
+}
+
+.tomorrow-timetable-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tomorrow-timetable-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: #344054;
+  line-height: 1.35;
+}
+
+.tomorrow-timetable-list li b {
+  color: #475467;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.tomorrow-timetable-list li span {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+@media (max-width: 720px) {
+  .tomorrow-preview-item--timetable {
+    grid-column: auto;
+  }
+
+  .tomorrow-timetable-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tomorrow-timetable-list li {
+    min-width: 0;
+  }
+
+  .tomorrow-timetable-list li span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
