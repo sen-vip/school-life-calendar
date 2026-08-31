@@ -1,5 +1,5 @@
 // ============================================================
-// 오늘학교 v1.5.8 학기 설정 제거 · 날짜 기준 시간표 조회
+// 오늘학교 v1.6.0 내일 미리보기 · 인앱 도움말 · 버전/GitHub 표시
 // NEIS 공통 당일 캐시 + 순차 표시 + 지연 로딩 안내
 // ============================================================
 
@@ -57,6 +57,10 @@ const state = {
   meal: null,
   todaySchedules: [],
   todayMeal: null,
+  tomorrowSchedules: [],
+  tomorrowMeal: null,
+  tomorrowScheduleStatus: "idle",
+  tomorrowMealStatus: "idle",
   timetable: [],
   timetableStatus: "idle",
   timetableMessage: "",
@@ -90,6 +94,16 @@ const els = {
   todayScheduleSummary: document.querySelector("#todayScheduleSummary"),
   todayMealSummary: document.querySelector("#todayMealSummary"),
   todayTimetableSummary: document.querySelector("#todayTimetableSummary"),
+  tomorrowPreviewCard: document.querySelector("#tomorrowPreviewCard"),
+  tomorrowPreviewTitle: document.querySelector("#tomorrowPreviewTitle"),
+  tomorrowDetailBtn: document.querySelector("#tomorrowDetailBtn"),
+  tomorrowMealTitle: document.querySelector("#tomorrowMealTitle"),
+  tomorrowMealSummary: document.querySelector("#tomorrowMealSummary"),
+  tomorrowScheduleSummary: document.querySelector("#tomorrowScheduleSummary"),
+  helpBtn: document.querySelector("#helpBtn"),
+  helpDialog: document.querySelector("#helpDialog"),
+  helpCloseBtn: document.querySelector("#helpCloseBtn"),
+  helpDoneBtn: document.querySelector("#helpDoneBtn"),
   monthTitle: document.querySelector("#monthTitle"),
   calendar: document.querySelector("#calendar"),
   prevMonth: document.querySelector("#prevMonth"),
@@ -114,6 +128,7 @@ let dataLoadingShowTimer = null;
 let dataLoadingSlowTimer = null;
 let dataLoadingHideTimer = null;
 let schoolSearchSequence = 0;
+let tomorrowPreviewSequence = 0;
 let schoolSearchController = null;
 let schoolSearchSlowTimer = null;
 let schoolSearchTimeoutTimer = null;
@@ -242,6 +257,24 @@ function renderOfficeOptions() {
   els.officeCode.innerHTML = OFFICE_OPTIONS.map((office) => `<option value="${office.code}">${office.name}</option>`).join("");
 }
 
+function openHelpDialog() {
+  if (!els.helpDialog) return;
+  if (typeof els.helpDialog.showModal === "function") {
+    if (!els.helpDialog.open) els.helpDialog.showModal();
+  } else {
+    els.helpDialog.setAttribute("open", "");
+  }
+}
+
+function closeHelpDialog() {
+  if (!els.helpDialog) return;
+  if (typeof els.helpDialog.close === "function" && els.helpDialog.open) {
+    els.helpDialog.close();
+  } else {
+    els.helpDialog.removeAttribute("open");
+  }
+}
+
 function bindEvents() {
   els.schoolSearchForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -269,6 +302,35 @@ function bindEvents() {
     requestAnimationFrame(() => scrollToViewSection(document.querySelector("#search"), true));
   });
 
+  if (els.helpBtn && els.helpDialog) {
+    els.helpBtn.addEventListener("click", () => openHelpDialog());
+    els.helpCloseBtn?.addEventListener("click", () => closeHelpDialog());
+    els.helpDoneBtn?.addEventListener("click", () => closeHelpDialog());
+    els.helpDialog.addEventListener("click", (event) => {
+      if (event.target === els.helpDialog) closeHelpDialog();
+    });
+  }
+
+  if (els.tomorrowDetailBtn) {
+    els.tomorrowDetailBtn.addEventListener("click", async () => {
+      if (!state.selectedSchool) {
+        state.activeTab = "settings";
+        renderView();
+        requestAnimationFrame(() => scrollToViewSection(document.querySelector("#search"), true));
+        return;
+      }
+
+      const tomorrow = getTomorrowDate();
+      state.currentDate = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), 1);
+      state.selectedDate = formatDateKey(tomorrow);
+      state.activeTab = "calendar";
+      renderView();
+      await loadMonthData();
+      renderAll();
+      requestAnimationFrame(() => scrollToViewSection(document.querySelector("#detailArea"), true));
+    });
+  }
+
 
   els.resetBtn.addEventListener("click", () => {
     clearSavedPreferences();
@@ -284,6 +346,10 @@ function bindEvents() {
     state.meal = null;
     state.todaySchedules = [];
     state.todayMeal = null;
+    state.tomorrowSchedules = [];
+    state.tomorrowMeal = null;
+    state.tomorrowScheduleStatus = "idle";
+    state.tomorrowMealStatus = "idle";
     state.timetable = [];
     state.timetableStatus = "idle";
     state.timetableMessage = "";
@@ -597,6 +663,104 @@ async function fetchTimetable({ forceRefresh = false } = {}) {
   return Array.isArray(result.data) ? result.data : [];
 }
 
+async function fetchSchedulesForDateKey(dateKey, { forceRefresh = false } = {}) {
+  if (!state.selectedSchool || !dateKey) return { data: [], stale: false };
+  const context = getNeisContext();
+  const [year, month] = dateKey.split("-");
+  const monthKey = `${year}-${month}`;
+  const cacheKey = NeisCache.keys.schedule(context.schoolCode, monthKey);
+  const result = await NeisCache.getOrFetch(cacheKey, async () => {
+    const params = new URLSearchParams({
+      officeCode: context.officeCode,
+      schoolCode: context.schoolCode,
+      year,
+      month: String(Number(month))
+    });
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/schedules?${params.toString()}`);
+    if (!response.ok) throw new Error("학사일정 조회 실패");
+    const data = await response.json();
+    return (data.schedules || []).map(normalizeSchedule);
+  }, { forceRefresh });
+
+  const monthSchedules = Array.isArray(result.data) ? result.data : [];
+  return {
+    data: monthSchedules.filter((item) => item.date === dateKey),
+    stale: Boolean(result.stale)
+  };
+}
+
+async function fetchMealForDateKey(dateKey, { forceRefresh = false } = {}) {
+  if (!state.selectedSchool || !dateKey) return { data: null, stale: false };
+  const context = getNeisContext();
+  const cacheKey = NeisCache.keys.meal(context.schoolCode, dateKey);
+  const result = await NeisCache.getOrFetch(cacheKey, async () => {
+    const params = new URLSearchParams({
+      officeCode: context.officeCode,
+      schoolCode: context.schoolCode,
+      date: compactDate(dateKey)
+    });
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/meals?${params.toString()}`);
+    if (!response.ok) throw new Error("급식 조회 실패");
+    const data = await response.json();
+    return data.meal ? normalizeMeal(data.meal) : null;
+  }, { forceRefresh });
+
+  return { data: result.data ?? null, stale: Boolean(result.stale) };
+}
+
+function getTomorrowDate() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+}
+
+async function loadTomorrowPreview() {
+  const sequence = ++tomorrowPreviewSequence;
+  if (!state.selectedSchool) {
+    state.tomorrowSchedules = [];
+    state.tomorrowMeal = null;
+    state.tomorrowScheduleStatus = "idle";
+    state.tomorrowMealStatus = "idle";
+    renderTomorrowPreview();
+    return;
+  }
+
+  const schoolCode = state.selectedSchool.schoolCode;
+  const tomorrowKey = formatDateKey(getTomorrowDate());
+  const isCurrent = () => sequence === tomorrowPreviewSequence
+    && state.selectedSchool?.schoolCode === schoolCode;
+
+  state.tomorrowSchedules = [];
+  state.tomorrowMeal = null;
+  state.tomorrowScheduleStatus = "loading";
+  state.tomorrowMealStatus = "loading";
+  renderTomorrowPreview();
+
+  const [scheduleResult, mealResult] = await Promise.allSettled([
+    fetchSchedulesForDateKey(tomorrowKey),
+    fetchMealForDateKey(tomorrowKey)
+  ]);
+
+  if (!isCurrent()) return;
+
+  if (scheduleResult.status === "fulfilled") {
+    state.tomorrowSchedules = scheduleResult.value.data;
+    state.tomorrowScheduleStatus = scheduleResult.value.stale ? "stale" : "success";
+  } else {
+    state.tomorrowSchedules = [];
+    state.tomorrowScheduleStatus = "error";
+  }
+
+  if (mealResult.status === "fulfilled") {
+    state.tomorrowMeal = mealResult.value.data;
+    state.tomorrowMealStatus = mealResult.value.stale ? "stale" : "success";
+  } else {
+    state.tomorrowMeal = null;
+    state.tomorrowMealStatus = "error";
+  }
+
+  renderTomorrowPreview();
+}
+
 function getTimetableApiName(school) {
   const schoolType = `${school?.schoolType || ""} ${school?.schoolName || ""}`;
   if (/초등/.test(schoolType)) return "elsTimetable";
@@ -624,6 +788,10 @@ async function loadMonthData() {
   state.meals = [];
   state.mealsByDate = {};
   state.meal = null;
+  state.tomorrowSchedules = [];
+  state.tomorrowMeal = null;
+  state.tomorrowScheduleStatus = "loading";
+  state.tomorrowMealStatus = "loading";
   state.scheduleStatus = "loading";
   state.scheduleMessage = "학사일정을 불러오는 중입니다.";
   state.mealStatus = "loading";
@@ -632,6 +800,7 @@ async function loadMonthData() {
   renderScheduleDetail();
   renderMealDetail();
   renderTodaySummary();
+  renderTomorrowPreview();
 
   const scheduleTask = (async () => {
     try {
@@ -691,6 +860,7 @@ async function loadMonthData() {
   }
 
   updateTodaySnapshot();
+  void loadTomorrowPreview();
   if (state.selectedDate) {
     updateDataLoading(loadingToken, "거의 다 불러왔어요", "선택 날짜 시간표를 확인하고 있어요.");
     await loadDayData();
@@ -794,6 +964,7 @@ function renderAll() {
   renderMonthTitle();
   renderCalendar();
   renderTodaySummary();
+  renderTomorrowPreview();
   renderDetails();
   renderView();
 }
@@ -960,6 +1131,64 @@ function renderTodaySummary() {
     els.todayTimetableSummary.innerHTML = `<p class="empty">오늘 등록된 시간표가 없어요. 학년·반을 확인해 주세요.</p>`;
   } else {
     els.todayTimetableSummary.innerHTML = `<p class="empty">오늘 시간표를 아직 불러오지 못했어요. 다시 확인해 주세요.</p>`;
+  }
+}
+
+function renderTomorrowPreview() {
+  if (!els.tomorrowPreviewCard) return;
+
+  const tomorrowKey = formatDateKey(getTomorrowDate());
+  if (els.tomorrowPreviewTitle) {
+    els.tomorrowPreviewTitle.textContent = `내일 ${formatKoreanDate(tomorrowKey)}`;
+  }
+  if (els.tomorrowDetailBtn) {
+    els.tomorrowDetailBtn.disabled = !state.selectedSchool;
+  }
+
+  if (!state.selectedSchool) {
+    if (els.tomorrowMealTitle) {
+      els.tomorrowMealTitle.innerHTML = buildSummaryTitle("내일 급식", "🍱");
+    }
+    if (els.tomorrowMealSummary) {
+      els.tomorrowMealSummary.innerHTML = `<p class="empty">학교를 선택하면 내일 급식을 미리 볼 수 있어요.</p>`;
+    }
+    if (els.tomorrowScheduleSummary) {
+      els.tomorrowScheduleSummary.innerHTML = `<p class="empty">학교를 선택하면 내일 학사일정을 미리 볼 수 있어요.</p>`;
+    }
+    return;
+  }
+
+  const tomorrowMeal = state.tomorrowMeal;
+  if (els.tomorrowMealTitle) {
+    const badge = tomorrowMeal?.calorie
+      ? ` <span class="title-badge meal-kcal">${escapeHtml(tomorrowMeal.calorie)}</span>`
+      : "";
+    els.tomorrowMealTitle.innerHTML = buildSummaryTitle("내일 급식", "🍱", badge);
+  }
+
+  if (els.tomorrowMealSummary) {
+    if (state.tomorrowMealStatus === "loading") {
+      els.tomorrowMealSummary.innerHTML = `<p class="empty">${renderLoadingText("내일 급식을 확인하는 중입니다")}</p>`;
+    } else if (state.tomorrowMealStatus === "error") {
+      els.tomorrowMealSummary.innerHTML = `<p class="empty">내일 급식정보를 불러오지 못했어요.</p>`;
+    } else if (tomorrowMeal?.dishes?.length) {
+      els.tomorrowMealSummary.innerHTML = `<ul>${tomorrowMeal.dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>${state.tomorrowMealStatus === "stale" ? `<p class="tomorrow-preview-note">저장된 조회 결과를 보여드려요.</p>` : ""}`;
+    } else {
+      els.tomorrowMealSummary.innerHTML = `<p class="empty">내일 급식정보가 없어요.</p>`;
+    }
+  }
+
+  const schedules = state.tomorrowSchedules || [];
+  if (els.tomorrowScheduleSummary) {
+    if (state.tomorrowScheduleStatus === "loading") {
+      els.tomorrowScheduleSummary.innerHTML = `<p class="empty">${renderLoadingText("내일 학사일정을 확인하는 중입니다")}</p>`;
+    } else if (state.tomorrowScheduleStatus === "error") {
+      els.tomorrowScheduleSummary.innerHTML = `<p class="empty">내일 학사일정을 불러오지 못했어요.</p>`;
+    } else if (schedules.length) {
+      els.tomorrowScheduleSummary.innerHTML = `<ul>${schedules.slice(0, 4).map((item) => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul>${schedules.length > 4 ? `<p class="tomorrow-preview-note">외 ${schedules.length - 4}건</p>` : ""}${state.tomorrowScheduleStatus === "stale" ? `<p class="tomorrow-preview-note">저장된 조회 결과를 보여드려요.</p>` : ""}`;
+    } else {
+      els.tomorrowScheduleSummary.innerHTML = `<p class="empty">내일 등록된 학사일정이 없어요.</p>`;
+    }
   }
 }
 

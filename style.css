@@ -2658,3 +2658,408 @@ body.has-selected-school .class-setting-panel .setting-step {
     padding: 14px 16px;
   }
 }
+
+/* =========================================================
+   v1.6.0 내일 미리보기 · 인앱 도움말 · 버전/GitHub 표시
+========================================================= */
+.version-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 7px;
+  border: 1px solid #ded7ff;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: #5a43c8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.top-actions button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.top-actions button:hover {
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+
+#tomorrowPreviewCard {
+  scroll-margin-top: 92px;
+}
+
+.tomorrow-preview-card {
+  padding: 24px 0 0;
+  overflow: hidden;
+  border-color: #dfe3e8;
+}
+
+.tomorrow-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 20px 18px;
+}
+
+.tomorrow-preview-head h2 {
+  margin: 5px 0 0;
+  color: var(--ink-strong);
+  font-size: clamp(21px, 2.5vw, 27px);
+  line-height: 1.25;
+  letter-spacing: -0.04em;
+}
+
+.tomorrow-detail-btn {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: #475467;
+  font-size: 13px;
+  font-weight: 650;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.tomorrow-detail-btn:hover {
+  border-color: #bfc5cd;
+  background: var(--surface-subtle);
+  color: var(--ink);
+}
+
+.tomorrow-detail-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.tomorrow-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+
+.tomorrow-preview-item {
+  min-width: 0;
+  min-height: 135px;
+  padding: 20px 20px 22px;
+  background: #fbfcfd;
+}
+
+.tomorrow-preview-item + .tomorrow-preview-item {
+  border-left: 1px solid var(--line);
+}
+
+.tomorrow-preview-item strong {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: var(--ink-strong);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.tomorrow-preview-body {
+  color: #344054;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.tomorrow-preview-body ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.tomorrow-preview-body li + li {
+  margin-top: 4px;
+}
+
+.tomorrow-preview-body .empty {
+  margin: 0;
+}
+
+.tomorrow-preview-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-footer a {
+  color: var(--muted);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer-divider {
+  color: var(--line-strong);
+}
+
+.help-dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(84vh, 760px);
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: 0 24px 64px rgba(16, 24, 40, 0.22);
+}
+
+.help-dialog::backdrop {
+  background: rgba(16, 24, 40, 0.42);
+  backdrop-filter: blur(3px);
+}
+
+.help-dialog-shell {
+  display: flex;
+  max-height: min(84vh, 760px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(215, 220, 226, 0.9);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.help-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.help-dialog-head h2 {
+  margin: 5px 0 0;
+  color: var(--ink-strong);
+  font-size: 23px;
+  line-height: 1.35;
+  letter-spacing: -0.04em;
+}
+
+.help-close-btn {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 25px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.help-close-btn:hover {
+  background: #e9edf1;
+  color: var(--ink);
+}
+
+.help-dialog-body {
+  overflow-y: auto;
+  padding: 4px 24px 8px;
+  overscroll-behavior: contain;
+}
+
+.help-section {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.help-section:last-child {
+  border-bottom: 0;
+}
+
+.help-section h3 {
+  margin: 0 0 8px;
+  color: var(--ink-strong);
+  font-size: 15px;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+}
+
+.help-section p,
+.help-section ul {
+  margin: 0;
+  color: #475467;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.help-section p + p,
+.help-section ul + p {
+  margin-top: 8px;
+}
+
+.help-section ul {
+  padding-left: 19px;
+}
+
+.help-section li + li {
+  margin-top: 4px;
+}
+
+.help-data-note {
+  margin: 12px 0 8px;
+  padding: 16px;
+  border: 1px solid #ded7ff;
+  border-radius: 12px;
+  background: #faf8ff;
+}
+
+.help-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+
+.help-dialog-foot span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.help-done-btn {
+  min-width: 74px;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.help-done-btn:hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+}
+
+@media (max-width: 720px) {
+  .version-badge {
+    min-height: 20px;
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+
+  .top-actions button {
+    min-height: 44px;
+    padding: 0 8px;
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  .tomorrow-preview-card {
+    padding-top: 20px;
+  }
+
+  .tomorrow-preview-head {
+    align-items: center;
+    padding: 0 16px 16px;
+  }
+
+  .tomorrow-preview-head h2 {
+    font-size: 20px;
+  }
+
+  .tomorrow-detail-btn {
+    min-height: 44px;
+    padding: 0 11px;
+    font-size: 12px;
+  }
+
+  .tomorrow-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tomorrow-preview-item {
+    min-height: 0;
+    padding: 18px 16px 20px;
+  }
+
+  .tomorrow-preview-item + .tomorrow-preview-item {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .help-dialog {
+    width: min(100vw - 20px, 720px);
+    max-height: calc(100dvh - 24px);
+  }
+
+  .help-dialog-shell {
+    max-height: calc(100dvh - 24px);
+  }
+
+  .help-dialog-head {
+    padding: 20px 18px 15px;
+  }
+
+  .help-dialog-head h2 {
+    font-size: 20px;
+  }
+
+  .help-dialog-body {
+    padding: 2px 18px 6px;
+  }
+
+  .help-dialog-foot {
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 420px) {
+  .brand-home {
+    gap: 6px;
+  }
+
+  #topSchoolName {
+    max-width: 27vw;
+  }
+
+  .version-badge {
+    padding-inline: 5px;
+  }
+
+  .tomorrow-preview-head {
+    gap: 10px;
+  }
+
+  .tomorrow-preview-head h2 {
+    font-size: 18px;
+  }
+
+  .tomorrow-detail-btn {
+    padding: 0 9px;
+  }
+}

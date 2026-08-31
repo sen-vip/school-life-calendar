@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=purple2" />
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=purple2" />
   <link rel="manifest" href="site.webmanifest?v=purple2" />
-  <link rel="stylesheet" href="style.css?v=1.5.7" />
+  <link rel="stylesheet" href="style.css?v=1.6.0" />
 </head>
 <body>
   <header class="app-header">
@@ -23,10 +23,11 @@
           </svg>
         </span>
         <span id="topSchoolName">오늘학교</span>
+        <span class="version-badge" aria-label="버전 1.6.0">v1.6.0</span>
       </a>
       <nav class="top-actions" aria-label="상단 메뉴">
         <a class="outline-link school-change-link" href="#search">학교변경</a>
-        <a class="help-link" href="https://github.com/sen-vip/school-life-calendar#readme" target="_blank" rel="noopener noreferrer">도움말</a>
+        <button type="button" class="help-link" id="helpBtn">도움말</button>
       </nav>
       <div class="data-loading-bar" id="dataLoadingBar" hidden role="status" aria-live="polite" aria-atomic="true">
         <span class="data-loading-spinner" aria-hidden="true"></span>
@@ -153,6 +154,26 @@
         </div>
       </section>
 
+      <section class="card tomorrow-preview-card" id="tomorrowPreviewCard" data-root-view="today" aria-live="polite">
+        <div class="tomorrow-preview-head">
+          <div>
+            <span class="kicker">내일 미리보기</span>
+            <h2 id="tomorrowPreviewTitle">내일 우리학교</h2>
+          </div>
+          <button type="button" class="tomorrow-detail-btn" id="tomorrowDetailBtn">내일 자세히 보기</button>
+        </div>
+        <div class="tomorrow-preview-grid">
+          <article class="tomorrow-preview-item tomorrow-preview-item--meal">
+            <strong id="tomorrowMealTitle" class="summary-title summary-title-meal"><span class="title-emoji" aria-hidden="true">🍱</span><span>내일 급식</span></strong>
+            <div id="tomorrowMealSummary" class="tomorrow-preview-body">학교를 선택해 주세요.</div>
+          </article>
+          <article class="tomorrow-preview-item tomorrow-preview-item--schedule">
+            <strong class="summary-title summary-title-schedule"><span class="title-emoji" aria-hidden="true">📅</span><span>내일 학사일정</span></strong>
+            <div id="tomorrowScheduleSummary" class="tomorrow-preview-body">학교를 선택해 주세요.</div>
+          </article>
+        </div>
+      </section>
+
       <section class="card tools-card" id="calendarArea" data-root-view="calendar">
         <div class="toolbar">
           <div class="toolbar-side toolbar-side-left" aria-hidden="true"></div>
@@ -214,12 +235,73 @@
       <footer class="app-footer">
         <span>제작</span>
         <strong>sen-vip</strong>
+        <span class="footer-divider" aria-hidden="true">·</span>
+        <a href="https://github.com/sen-vip/school-life-calendar" target="_blank" rel="noopener noreferrer">GitHub</a>
       </footer>
     </main>
   </div>
 
+  <dialog class="help-dialog" id="helpDialog" aria-labelledby="helpDialogTitle">
+    <div class="help-dialog-shell">
+      <div class="help-dialog-head">
+        <div>
+          <span class="kicker">오늘학교 도움말</span>
+          <h2 id="helpDialogTitle">처음 써도 바로 알 수 있게 정리했어요</h2>
+        </div>
+        <button type="button" class="help-close-btn" id="helpCloseBtn" aria-label="도움말 닫기">×</button>
+      </div>
+
+      <div class="help-dialog-body">
+        <section class="help-section help-start">
+          <h3>1. 먼저 학교와 학년·반을 설정해 주세요</h3>
+          <p><strong>학교설정</strong>에서 지역과 학교명을 검색한 뒤, 학년·반을 입력하고 학교를 선택하면 됩니다. 한 번 저장한 설정은 같은 브라우저에서 다음 접속 때 다시 불러옵니다.</p>
+        </section>
+
+        <section class="help-section">
+          <h3>2. 오늘 화면에서는 세 가지를 한 번에 봅니다</h3>
+          <ul>
+            <li><strong>시간표</strong>: 설정한 학년·반의 오늘 수업</li>
+            <li><strong>급식</strong>: 오늘 식단과 제공되는 경우 칼로리</li>
+            <li><strong>학사일정</strong>: 행사, 시험, 재량휴업일 등 등록된 일정</li>
+          </ul>
+          <p><strong>오늘 내용 복사</strong>를 누르면 메신저에 붙여넣기 좋은 형식으로 복사됩니다.</p>
+        </section>
+
+        <section class="help-section">
+          <h3>3. 내일 미리보기는 급식과 학사일정을 먼저 보여줍니다</h3>
+          <p>오늘 화면 아래에서 내일 급식과 학사일정을 미리 확인할 수 있습니다. <strong>내일 자세히 보기</strong>를 누르면 달력의 내일 날짜로 이동하고 시간표까지 함께 확인합니다.</p>
+        </section>
+
+        <section class="help-section">
+          <h3>4. 달력에서는 원하는 날짜를 눌러 확인하세요</h3>
+          <p>날짜를 선택하면 그날의 학사일정·급식·시간표가 아래 상세 영역에 표시됩니다. 월을 이동해 다른 달도 볼 수 있고, <strong>오늘</strong> 버튼으로 바로 돌아올 수 있습니다.</p>
+        </section>
+
+        <section class="help-section">
+          <h3>5. 정보가 안 보일 때</h3>
+          <ul>
+            <li>학교나 교육청에서 해당 데이터를 아직 등록하지 않은 경우가 있습니다.</li>
+            <li>시간표가 비어 있으면 학년·반이 맞는지 먼저 확인해 주세요.</li>
+            <li>처음 연결하거나 공공데이터 응답이 느릴 때는 조회에 시간이 조금 걸릴 수 있습니다.</li>
+            <li>시간표만 다시 확인하고 싶다면 선택된 학교 카드의 <strong>시간표 새로고침</strong>을 이용하세요.</li>
+          </ul>
+        </section>
+
+        <section class="help-section help-data-note">
+          <h3>데이터와 저장 방식</h3>
+          <p>학교생활 정보는 공공데이터를 바탕으로 조회합니다. 선택한 학교·학년·반 설정은 이 브라우저에 저장되며, 별도 회원가입이나 로그인은 사용하지 않습니다. 조회 시 선택한 학교와 학년·반은 필요한 학교생활 정보를 가져오기 위한 요청에 사용됩니다.</p>
+        </section>
+      </div>
+
+      <div class="help-dialog-foot">
+        <span>오늘학교 v1.6.0</span>
+        <button type="button" class="help-done-btn" id="helpDoneBtn">확인</button>
+      </div>
+    </div>
+  </dialog>
+
   <div class="copy-toast" id="copyToast" role="status" aria-live="polite"></div>
   <script src="neis-cache.js"></script>
-  <script src="app.js?v=1.5.7"></script>
+  <script src="app.js?v=1.6.0"></script>
 </body>
 </html>
