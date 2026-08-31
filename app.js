@@ -1,5 +1,5 @@
 // ============================================================
-// 오늘학교 v1.6.2 내일 시간표 미리보기 · 오늘 우선 로딩 · 검색 캐시
+// 오늘학교 v1.6.3 내일 시간표 가독성 개선 · 오늘 우선 로딩 · 검색 캐시
 // NEIS 공통 캐시 + 오늘 정보 우선 표시 + 프록시 워밍업
 // ============================================================
 
@@ -1366,7 +1366,7 @@ function renderTomorrowPreview() {
     } else if (state.tomorrowTimetableStatus === "error") {
       els.tomorrowTimetableSummary.innerHTML = `<p class="empty">내일 시간표를 불러오지 못했어요.</p>`;
     } else if (tomorrowTimetable.length) {
-      els.tomorrowTimetableSummary.innerHTML = `<ol class="tomorrow-timetable-list">${tomorrowTimetable.slice(0, 8).map((item) => `<li><b>${escapeHtml(item.period)}교시</b><span>${escapeHtml(item.subject || "-")}</span></li>`).join("")}</ol>${tomorrowTimetable.length > 8 ? `<p class="tomorrow-preview-note">외 ${tomorrowTimetable.length - 8}교시</p>` : ""}${state.tomorrowTimetableStatus === "stale" ? `<p class="tomorrow-preview-note">저장된 조회 결과를 보여드려요.</p>` : ""}`;
+      els.tomorrowTimetableSummary.innerHTML = `<ol class="tomorrow-timetable-list">${tomorrowTimetable.slice(0, 7).map((item) => `<li><b>${escapeHtml(item.period)}교시</b><span>${escapeHtml(item.subject || "-")}</span></li>`).join("")}</ol>${tomorrowTimetable.length > 7 ? `<p class="tomorrow-preview-note">외 ${tomorrowTimetable.length - 7}교시</p>` : ""}${state.tomorrowTimetableStatus === "stale" ? `<p class="tomorrow-preview-note">저장된 조회 결과를 보여드려요.</p>` : ""}`;
     } else {
       els.tomorrowTimetableSummary.innerHTML = `<p class="empty">내일 등록된 시간표가 없어요. 학년·반을 확인해 주세요.</p>`;
     }

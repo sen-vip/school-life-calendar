@@ -3113,63 +3113,60 @@ body.has-selected-school .class-setting-panel .setting-step {
   }
 }
 
+/* v1.6.3: 내일도 오늘처럼 3칸 + 교시별 세로 목록 */
+.tomorrow-preview-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
 
-/* v1.6.2: 내일 시간표까지 한눈에 보는 2+1 카드 레이아웃 */
 .tomorrow-preview-item--timetable {
-  grid-column: 1 / -1;
-  min-height: 112px;
+  grid-column: auto;
 }
 
 .tomorrow-timetable-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .tomorrow-timetable-list li {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  padding: 6px 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
   color: #344054;
-  line-height: 1.35;
+  line-height: 1.65;
+}
+
+.tomorrow-timetable-list li + li {
+  margin-top: 5px;
 }
 
 .tomorrow-timetable-list li b {
   color: #475467;
-  font-size: 12px;
+  font-size: inherit;
+  font-weight: 650;
   white-space: nowrap;
 }
 
 .tomorrow-timetable-list li span {
-  font-size: 13px;
-  font-weight: 650;
+  min-width: 0;
+  font-size: inherit;
+  font-weight: 400;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 720px) {
-  .tomorrow-preview-item--timetable {
-    grid-column: auto;
+  .tomorrow-preview-grid {
+    grid-template-columns: 1fr;
   }
 
-  .tomorrow-timetable-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  /* 오늘 화면과 같은 모바일 우선순위: 시간표 → 급식 → 학사일정 */
+  .tomorrow-preview-item--timetable { order: 1; }
+  .tomorrow-preview-item--meal { order: 2; }
+  .tomorrow-preview-item--schedule { order: 3; }
 
   .tomorrow-timetable-list li {
-    min-width: 0;
-  }
-
-  .tomorrow-timetable-list li span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    grid-template-columns: 48px minmax(0, 1fr);
   }
 }
