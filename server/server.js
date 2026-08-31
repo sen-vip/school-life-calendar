@@ -6,6 +6,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const API_KEY = process.env.NEIS_API_KEY;
+const neisMemoryCache = new Map();
+const neisInflight = new Map();
+const NEIS_CACHE_TTL_MS = {
+  schoolInfo: 12 * 60 * 60 * 1000,
+  SchoolSchedule: 15 * 60 * 1000,
+  mealServiceDietInfo: 15 * 60 * 1000,
+  elsTimetable: 5 * 60 * 1000,
+  misTimetable: 5 * 60 * 1000,
+  hisTimetable: 5 * 60 * 1000,
+  spsTimetable: 5 * 60 * 1000
+};
 
 app.use(cors());
 app.use(express.json());
@@ -139,21 +150,49 @@ app.get("/api/timetable", async (req, res) => {
 async function neisFetch(endpoint, params) {
   if (!API_KEY) throw new Error("NEIS_API_KEY 환경변수가 없습니다.");
 
-  const url = new URL(`${NEIS_BASE_URL}/${endpoint}`);
-  url.searchParams.set("KEY", API_KEY);
-  url.searchParams.set("Type", "json");
-  url.searchParams.set("pIndex", "1");
-  url.searchParams.set("pSize", "100");
+  const normalizedEntries = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== "")
+    .map(([key, value]) => [key, String(value)])
+    .sort(([a], [b]) => a.localeCompare(b));
+  const cacheKey = `${endpoint}?${new URLSearchParams(normalizedEntries).toString()}`;
+  const cached = neisMemoryCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+  if (neisInflight.has(cacheKey)) return neisInflight.get(cacheKey);
 
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && String(value).trim() !== "") {
-      url.searchParams.set(key, String(value));
+  const task = (async () => {
+    try {
+      const url = new URL(`${NEIS_BASE_URL}/${endpoint}`);
+      url.searchParams.set("KEY", API_KEY);
+      url.searchParams.set("Type", "json");
+      url.searchParams.set("pIndex", "1");
+      url.searchParams.set("pSize", "100");
+
+      normalizedEntries.forEach(([key, value]) => url.searchParams.set(key, value));
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`NEIS 요청 실패: ${response.status}`);
+      const data = await response.json();
+      const ttl = NEIS_CACHE_TTL_MS[endpoint] || 5 * 60 * 1000;
+      neisMemoryCache.set(cacheKey, { data, expiresAt: Date.now() + ttl });
+
+      if (neisMemoryCache.size > 500) {
+        const now = Date.now();
+        for (const [key, entry] of neisMemoryCache) {
+          if (entry.expiresAt <= now) neisMemoryCache.delete(key);
+        }
+        while (neisMemoryCache.size > 500) {
+          const oldestKey = neisMemoryCache.keys().next().value;
+          neisMemoryCache.delete(oldestKey);
+        }
+      }
+      return data;
+    } finally {
+      neisInflight.delete(cacheKey);
     }
-  });
+  })();
 
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`NEIS 요청 실패: ${response.status}`);
-  return response.json();
+  neisInflight.set(cacheKey, task);
+  return task;
 }
 
 function getRows(data, rootName) {

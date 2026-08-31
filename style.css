@@ -3063,3 +3063,52 @@ body.has-selected-school .class-setting-panel .setting-step {
     padding: 0 9px;
   }
 }
+
+/* v1.6.1: 우리아이 오늘과 같은 내일 미리보기 카드 구조 */
+.tomorrow-preview-card {
+  padding: 24px 20px 20px;
+  overflow: visible;
+}
+
+.tomorrow-preview-head {
+  padding: 0 0 16px;
+}
+
+.tomorrow-preview-grid {
+  gap: 10px;
+  border-top: 0;
+}
+
+.tomorrow-preview-item {
+  min-height: 136px;
+  padding: 17px 15px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f8f9fb;
+}
+
+.tomorrow-preview-item + .tomorrow-preview-item {
+  border-left: 1px solid var(--line);
+}
+
+@media (max-width: 720px) {
+  .tomorrow-preview-card {
+    padding: 20px 16px 16px;
+  }
+
+  .tomorrow-preview-head {
+    padding: 0 0 14px;
+  }
+
+  .tomorrow-preview-grid {
+    gap: 10px;
+  }
+
+  .tomorrow-preview-item {
+    padding: 16px 14px 17px;
+  }
+
+  .tomorrow-preview-item + .tomorrow-preview-item {
+    border-top: 1px solid var(--line);
+  }
+}

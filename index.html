@@ -10,7 +10,9 @@
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=purple2" />
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=purple2" />
   <link rel="manifest" href="site.webmanifest?v=purple2" />
-  <link rel="stylesheet" href="style.css?v=1.6.0" />
+  <link rel="preconnect" href="https://school-life-calendar-proxy.onrender.com" crossorigin />
+  <link rel="dns-prefetch" href="//school-life-calendar-proxy.onrender.com" />
+  <link rel="stylesheet" href="style.css?v=1.6.1" />
 </head>
 <body>
   <header class="app-header">
@@ -23,7 +25,7 @@
           </svg>
         </span>
         <span id="topSchoolName">오늘학교</span>
-        <span class="version-badge" aria-label="버전 1.6.0">v1.6.0</span>
+        <span class="version-badge" aria-label="버전 1.6.1">v1.6.1</span>
       </a>
       <nav class="top-actions" aria-label="상단 메뉴">
         <a class="outline-link school-change-link" href="#search">학교변경</a>
@@ -264,7 +266,7 @@
             <li><strong>급식</strong>: 오늘 식단과 제공되는 경우 칼로리</li>
             <li><strong>학사일정</strong>: 행사, 시험, 재량휴업일 등 등록된 일정</li>
           </ul>
-          <p><strong>오늘 내용 복사</strong>를 누르면 메신저에 붙여넣기 좋은 형식으로 복사됩니다.</p>
+          <p><strong>오늘 내용 복사</strong>를 누르면 메신저에 붙여넣기 좋은 형식으로 복사됩니다. 앱은 오늘 급식·학사일정·시간표를 먼저 보여주고, 달력용 월 정보와 내일 미리보기는 뒤에서 이어서 준비합니다.</p>
         </section>
 
         <section class="help-section">
@@ -294,7 +296,7 @@
       </div>
 
       <div class="help-dialog-foot">
-        <span>오늘학교 v1.6.0</span>
+        <span>오늘학교 v1.6.1</span>
         <button type="button" class="help-done-btn" id="helpDoneBtn">확인</button>
       </div>
     </div>
@@ -302,6 +304,6 @@
 
   <div class="copy-toast" id="copyToast" role="status" aria-live="polite"></div>
   <script src="neis-cache.js"></script>
-  <script src="app.js?v=1.6.0"></script>
+  <script src="app.js?v=1.6.1"></script>
 </body>
 </html>
