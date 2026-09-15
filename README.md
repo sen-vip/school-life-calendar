@@ -156,6 +156,13 @@
 
 ## 🧩 버전 기록
 
+### v1.6.4 Hakdol Core v0.2.0 적용
+
+- 기존 `neis-cache.js`를 제거하고 `hakdol-core.js` v0.2.0의 공통 NEIS 캐시 모듈을 사용하도록 전환
+- 기존 `window.NeisCache` 호환 별칭과 `hakdol.neis.v1` 캐시 키를 유지하여 학교 검색·급식·학사일정·시간표 동작과 기존 캐시를 그대로 유지
+- 화면·문구·사용 흐름은 v1.6.3과 동일하며, 이번 버전은 공통 기반 연결만 변경
+- 코어 원본: `sen-vip/hakdol-core`의 `dist/hakdol-core.js` v0.2.0
+
 
 ### v1.6.3 내일 시간표 가독성 개선
 
